@@ -3,12 +3,18 @@ name: Windows MSYS Build
 on:
   push:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 env:
   GH_CACHE_KEY: 8
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
     strategy:
       fail-fast: false
       matrix:

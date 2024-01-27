@@ -3,12 +3,18 @@ name: Linux Build
 on:
   push:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 env:
   GH_CACHE_KEY: 3
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
     strategy:
       fail-fast: false
       matrix:
@@ -57,6 +63,7 @@ jobs:
           name: Perimeter ${{matrix.env.build_type}} ${{matrix.env.arch}}
           path: ./build/docker-linux/output/Perimeter.tar
   check_build:
+    if: github.event.pull_request.draft == false
     strategy:
       fail-fast: false
       matrix:

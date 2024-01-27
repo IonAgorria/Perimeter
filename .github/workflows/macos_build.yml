@@ -3,6 +3,11 @@ name: MacOS Build
 on:
   push:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 env:
   VULKAN_SDK_VERSION: '1.3.250.1'
@@ -12,6 +17,7 @@ env:
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
     strategy:
       fail-fast: false
       matrix:

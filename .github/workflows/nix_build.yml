@@ -3,6 +3,11 @@ name: Nix Build
 on:
   push:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 env:
   GH_CACHE_KEY: 1
@@ -10,6 +15,7 @@ env:
 
 jobs:
 #  build:
+#    if: github.event.pull_request.draft == false
 #    strategy:
 #      fail-fast: false
 #      matrix:
@@ -37,6 +43,7 @@ jobs:
 #        github_access_token: ${{ secrets.GITHUB_TOKEN }}
 #    - run: nix build ".#platform_${{matrix.target.pkg}}${{matrix.env.flake}}"
   check:
+    if: github.event.pull_request.draft == false
     name: Check
     runs-on: ubuntu-latest
     steps:

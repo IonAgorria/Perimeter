@@ -3,6 +3,11 @@ name: Windows MSVC Build
 on:
   push:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 
 env:
   VCPKG_COMMIT_ID: '21bbb14c4113b89cd06402e852e075341722304f'
@@ -11,6 +16,7 @@ env:
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
     strategy:
       matrix:
         env: [
