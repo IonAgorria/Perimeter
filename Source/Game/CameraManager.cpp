@@ -528,6 +528,7 @@ void terCameraType::quant(float mouseDeltaX, float mouseDeltaY, float delta_time
 	update();
 }
 
+
 void terCameraType::setTarget(const CameraCoordinate& coord, int duration) 
 { 
 	interpolationPoints_[0] = interpolationPoints_[1] = coordinate_;
