@@ -64,7 +64,7 @@ int cSokolRender::Init(int xScr, int yScr, int mode, SDL_Window* wnd, int Refres
     }
 
     ClearPooledResources(0);
-    ClearCommands();
+    ClearAllCommands();
     ClearPipelines();
     
     const char* sokol_backend = "Unknown";
@@ -76,7 +76,7 @@ int cSokolRender::Init(int xScr, int yScr, int mode, SDL_Window* wnd, int Refres
     //Prepare sokol gfx desc
     sg_desc desc = {};
     desc.pipeline_pool_size = PERIMETER_SOKOL_PIPELINES_MAX,
-    desc.shader_pool_size = 8,
+    desc.shader_pool_size = 64,
     desc.buffer_pool_size = 1024 * 32;
     desc.uniform_buffer_size = 1024 * 1024 * 32;
     desc.image_pool_size = 1024 * 4; //1024 is enough for PGW+PET game
@@ -298,10 +298,8 @@ int cSokolRender::Init(int xScr, int yScr, int mode, SDL_Window* wnd, int Refres
     memset(buf, 0xFF, buf_len);
     imgdesc->data.subimage[0][0] = { buf, buf_len };
     emptyTexture = new SokolTexture2D(imgdesc);
-
-#ifdef PERIMETER_DEBUG
     emptyTexture->label = "EmptySlotTexture";
-#endif
+    PrepareSokolTexture(emptyTexture);
 
     for (int i = 0; i < PERIMETER_SOKOL_TEXTURES; ++i) {
         activeTextureTransform[i] = Mat4f::ID;
@@ -364,7 +362,7 @@ int cSokolRender::Done() {
     int ret = cInterfaceRenderDevice::Done();
     activeCommand.Clear();
     ClearPooledResources(0);
-    ClearCommands();
+    ClearAllCommands();
     ClearPipelines();
     shaders.clear();
     delete emptyTexture;
@@ -429,74 +427,101 @@ void cSokolRender::DeleteIndexBuffer(IndexBuffer &ib) {
 
 #define ClearPooledResources_Debug 0
 void cSokolRender::ClearPooledResources(uint32_t max_life) {
-    if (bufferPool.empty()) {
+    if (bufferPool.empty() && imagePool.empty()) {
         return;
     }
 #if defined(PERIMETER_DEBUG) && ClearPooledResources_Debug
-    size_t count = bufferPool.size();
+    size_t bufferCount = bufferPool.size();
+    size_t imageCount = imagePool.size();
 #endif
-    auto it = bufferPool.begin();
-    while (it != bufferPool.end()) {
-        auto& res = it->second;
-        res.unused_since++;
-        if (res.unused_since >= max_life) {
-            res.resource->DecRef();
-            res.resource = nullptr;
-            it = bufferPool.erase(it);
-        } else {
-            it++;
+    {
+        auto it = bufferPool.begin();
+        while (it != bufferPool.end()) {
+            auto& res = it->second;
+            res.unused_since++;
+            if (res.unused_since >= max_life) {
+                res.resource->DecRef();
+                res.resource = nullptr;
+                it = bufferPool.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+    {
+        auto it = imagePool.begin();
+        while (it != imagePool.end()) {
+            auto& res = it->second;
+            res.unused_since++;
+            if (res.unused_since >= max_life) {
+                res.resource->DecRef();
+                res.resource = nullptr;
+                it = imagePool.erase(it);
+            } else {
+                it++;
+            }
         }
     }
 #if defined(PERIMETER_DEBUG) && ClearPooledResources_Debug
-    if (count != bufferPool.size()) {
-        printf("ClearPooledResources %" PRIsize " -> %" PRIsize "\n", count, bufferPool.size());
+    if (bufferCount != bufferPool.size()) {
+        printf("ClearPooledResources buffers %" PRIsize " -> %" PRIsize "\n", bufferCount, bufferPool.size());
+    }
+    if (imageCount != imagePool.size()) {
+        printf("ClearPooledResources images %" PRIsize " -> %" PRIsize "\n", imageCount, imagePool.size());
     }
 #endif
 }
 
-void cSokolRender::ClearCommands() {
-    std::unordered_set<SokolResourceBuffer*> pooled;
-    auto ClearCommands = [&pooled, this](std::vector<SokolCommand*>& commands) {
-        for (SokolCommand* command : commands) {
-            //Reclaim resources that can be reused
-            SokolResourceBuffer* vertex_buffer = command->vertex_buffer;
-            if (vertex_buffer && vertex_buffer->key != SokolResourceKeyNone && pooled.count(vertex_buffer) == 0) {
-                command->vertex_buffer = nullptr;
-                xassert(0 < vertex_buffer->RefCount() && vertex_buffer->RefCount() <= 50);
-                bufferPool.emplace(
-                    vertex_buffer->key,
-                    SokolResourcePooled(vertex_buffer)
-                );
-                pooled.emplace(vertex_buffer);
-            }
-            SokolResourceBuffer* index_buffer = command->index_buffer;
-            if (index_buffer && index_buffer->key != SokolResourceKeyNone && pooled.count(index_buffer) == 0) {
-                command->index_buffer = nullptr;
-                xassert(0 < index_buffer->RefCount() && index_buffer->RefCount() <= 50);
-                bufferPool.emplace(
-                    index_buffer->key, 
-                    SokolResourcePooled(index_buffer)
-                );
-                pooled.emplace(index_buffer);
-            }
-            
-            delete command;
-        }
-    };
+#define CanStorePooledResource(res) (res && !res->pooled && res->key != SokolResourceKeyNone) 
 
-    for (auto& target : std::array<SokolRenderTarget*, 2>{shadowMapRenderTarget, lightMapRenderTarget}) {
+template<typename T>
+void StorePooledResource(
+        std::unordered_multimap<uint64_t, SokolResourcePooled<T>>& res_pool,
+        SokolResource<T>*& res
+) {
+    xassert(CanStorePooledResource(res));
+    xassert(0 < res->RefCount() && res->RefCount() <= 10000);
+    res->IncRef();
+    res->pooled = true;
+    res->burned = false;
+    res_pool.emplace(
+        res->key,
+        SokolResourcePooled<T>(res)
+    );
+}
+
+void cSokolRender::ClearCommands(std::vector<SokolCommand*>& commands_to_clear) {    
+    for (SokolCommand* command : commands_to_clear) {
+        //Reclaim resources that can be reused
+        if (CanStorePooledResource(command->vertex_buffer)) {
+            StorePooledResource(bufferPool, command->vertex_buffer);
+        }
+        if (CanStorePooledResource(command->index_buffer)) {
+            StorePooledResource(bufferPool, command->index_buffer);
+        }
+        for (SokolResourceImage* image : command->sokol_images) {
+            if (CanStorePooledResource(image)) {
+                StorePooledResource(imagePool, image);
+            }
+        }
+
+        delete command;
+    }
+
+    commands_to_clear.clear();
+}
+
+void cSokolRender::ClearAllCommands() {
+    for (auto& target : {
+        shadowMapRenderTarget,
+        lightMapRenderTarget
+    }) {
         if (target != nullptr) {
             ClearCommands(target->commands);
-            target->commands.clear();
         }
     }
 
     ClearCommands(commands);
-    commands.clear();
-
-#ifdef PERIMETER_DEBUG
-    //printf("%ld %ld\n", reclaimed.size(), bufferPool.size());
-#endif
 }
 
 void cSokolRender::ClearPipelines() {
@@ -712,25 +737,25 @@ void SokolCommand::ClearShaderParams() {
     fs_params_len = 0;
 }
 
-void SokolCommand::ClearTextures() {
+void SokolCommand::ClearImages() {
     for (int i = 0; i < PERIMETER_SOKOL_TEXTURES; ++i) {
-        SetTexture(i, nullptr);
+        SetImage(i, nullptr);
     }
 }
 
 void SokolCommand::Clear() {
     ClearDrawData();
     ClearShaderParams();
-    ClearTextures();
+    ClearImages();
 }
 
-void SokolCommand::SetTexture(size_t index, SokolResourceTexture* texture) {
+void SokolCommand::SetImage(size_t index, SokolResourceImage* image) {
     xassert(index<PERIMETER_SOKOL_TEXTURES);
-    if (texture) {
-        texture->IncRef();
+    if (image) {
+        image->IncRef();
     }
-    if (sokol_textures[index]) {
-        sokol_textures[index]->DecRef();
+    if (sokol_images[index]) {
+        sokol_images[index]->DecRef();
     }
-    sokol_textures[index] = texture;
+    sokol_images[index] = image;
 }

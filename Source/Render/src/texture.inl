@@ -12,7 +12,7 @@ enum eAttributeTexture
     TEXTURE_POOL_DEFAULT    =	1<<26,
 	TEXTURE_GRAY			=   1<<27,
 	TEXTURE_UVBUMP			=	1<<28,
-	TEXTURE_U16V16			=	1<<29,
+    TEXTURE_U16V16			=	1<<29,
 
 	TEXTURE_ALPHA_BLEND		=	MAT_ALPHA_BLEND,	//  текстура содержит альфу
 	TEXTURE_ALPHA_TEST		=	MAT_ALPHA_TEST,	// текстура содержит маску в альфе

@@ -35,7 +35,7 @@ union SurfaceImage {
 
 class cTexture : public cUnknownClass, public sAttribute
 {	// класс с анимацией, является динамическим указателем, то есть может удалzться через Release()
-	std::string		name;				// имя файла из которого загружена текстура
+    std::string		name;				// имя файла из которого загружена текстура
     short		_x,_y;				// битовый размер текстуры
     short		_w,_h;				// битовый размер текстуры
 	int			TimePerFrame;		// фремя проигрывания
@@ -43,6 +43,7 @@ class cTexture : public cUnknownClass, public sAttribute
 public:
     float       bump_scale = 1;
 	std::vector<TextureImage> frames;
+    std::string		label = {};
 
 	cTexture(const char *TexName=0);
 	~cTexture();
