@@ -2,11 +2,12 @@
 #include <array>
 #include <string>
 #include <vector>
+#include <SDL_mouse.h>
 #include "xmath.h"
 #include "Umath.h"
 #include "StdAfxRD.h"
 #include "VertexFormat.h"
-#include <sokol_gfx.h>
+#include "SokolIncludes.h"
 #include "SokolResources.h"
 #include "IRenderDevice.h"
 #include "SokolRender.h"
@@ -39,7 +40,6 @@ void sokol_metal_render_callback() {
 #ifdef PERIMETER_DEBUG
 void sokol_metal_capture_frame();
 #endif
-
 #endif
 
 //How many frames to store the resources until freed
@@ -96,6 +96,18 @@ void cSokolRender::DoSokolRendering() {
 #endif
     }
 #endif
+
+    if (debugUIEnabled) {
+        static int last_clock = clocki();
+        const simgui_frame_desc_t frame_desc = {
+                .width = ScreenSize.x,
+                .height = ScreenSize.y,
+                .delta_time = clocki() - last_clock,
+                .dpi_scale = 1.0
+        };
+        last_clock = clocki();
+        simgui_new_frame(&frame_desc);
+    }
 
     for (auto& target : { shadowMapRenderTarget, lightMapRenderTarget }) {
         if (target != nullptr) {
@@ -281,6 +293,13 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
         sg_draw(static_cast<int>(command->base_elements), static_cast<int>(command->indices), 1);
     }
 
+    //Special pass for imgui during swapchain pass
+    if (debugUIEnabled && render_pass.attachments.id == 0) {
+        sgimgui_draw(imgui_state);
+        sgimgui_draw_menu(imgui_state, "sokol-gfx");
+        simgui_render();
+    }
+
     //End pass
     sg_end_pass();
 }
@@ -329,6 +348,32 @@ void cSokolRender::StartCaptureFrame() {
     is_capturing_frame = true;
 }
 #endif
+
+void cSokolRender::DebugUISetEnable(bool state) {
+    cInterfaceRenderDevice::DebugUISetEnable(state);
+    
+    //If enabled and imgui_state isn't initialized, do it
+    if (debugUIEnabled && imgui_state == nullptr) {
+        const simgui_desc_t simgui_desc = {};
+        simgui_setup(&simgui_desc);
+        const sgimgui_desc_t sgimgui_desc = {};
+        imgui_state = new sgimgui_t {};
+        sgimgui_init(imgui_state, &sgimgui_desc);
+    }
+}
+
+bool cSokolRender::DebugUIMouseMove(const Vect2f& pos) {
+    simgui_add_mouse_pos_event(
+        (pos.x + 0.5f) * ScreenSize.x,
+        (pos.y + 0.5f) * ScreenSize.y
+    );
+    return false;
+}
+
+bool cSokolRender::DebugUIMousePress(const Vect2f& pos, uint8_t button, bool pressed) {
+    simgui_add_mouse_button_event(button - SDL_BUTTON_LEFT, pressed);
+    return true;
+}
 
 void cSokolRender::ClearActiveBufferAndPassAction() {
     if (activeDrawBuffer) {
