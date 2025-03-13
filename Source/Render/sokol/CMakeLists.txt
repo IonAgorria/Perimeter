@@ -21,7 +21,7 @@ IF (OPTION_PROCESS_SHADERS)
     #Download precompiled sokol-shdc
     FetchContent_Declare(sokol-tools-bin
             GIT_REPOSITORY    https://github.com/floooh/sokol-tools-bin
-            GIT_TAG           "f1af4529746b804d6c79d5a36c333aec489fab27"
+            GIT_TAG           "b8705b0acce22a48e5b2b91d4cf1849bdb9d1ab8"
             GIT_SHALLOW       OFF
     )
     FetchContent_MakeAvailable(sokol-tools-bin)
@@ -36,7 +36,7 @@ IF (OPTION_PROCESS_SHADERS)
     add_custom_target(sokol_shaders)
 
     IF (MACOS)
-        IF (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm" OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch")
+        IF (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "arm")
             set(SOKOL_SHDC_BIN ${sokol-tools-bin_SOURCE_DIR}/bin/osx_arm64/sokol-shdc)
         ELSE()
             set(SOKOL_SHDC_BIN ${sokol-tools-bin_SOURCE_DIR}/bin/osx/sokol-shdc)
@@ -44,7 +44,11 @@ IF (OPTION_PROCESS_SHADERS)
     ELSEIF(PERIMETER_WINDOWS)
         set(SOKOL_SHDC_BIN ${sokol-tools-bin_SOURCE_DIR}/bin/win32/sokol-shdc.exe)
     ELSE()
-        set(SOKOL_SHDC_BIN ${sokol-tools-bin_SOURCE_DIR}/bin/linux/sokol-shdc)
+        IF (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "arm64")
+            set(SOKOL_SHDC_BIN ${sokol-tools-bin_SOURCE_DIR}/bin/linux_arm64/sokol-shdc)
+        else()
+            set(SOKOL_SHDC_BIN ${sokol-tools-bin_SOURCE_DIR}/bin/linux/sokol-shdc)
+        endif()
     ENDIF()
     
     MACRO(PERIMETER_SOKOL_SHDC SHADER_FILE OUTPUT_FILE SHADER_DEFINES_ARG)
