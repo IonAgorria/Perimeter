@@ -204,15 +204,20 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
         }
 
 #ifdef CMDS_COMPARE_PREV_COMMAND
-        bool pipeline_diff = !prev_command || prev_command->pipeline != pipeline;
-        bool vs_params_diff = !prev_command || pipeline_diff
+        bool pipeline_diff = !prev_command || prev_command->pipeline != pipeline
+        || prev_command->vertex_buffer != command->vertex_buffer
+        || prev_command->index_buffer != command->index_buffer
         || prev_command->vs_params_len != command->vs_params_len
+        || (0 != memcmp(
+                prev_command->sokol_images,
+                command->sokol_images,
+                sizeof(SokolResourceImage*) * PERIMETER_SOKOL_TEXTURES
+        ))
         || (0 != memcmp(
                 prev_command->vs_params,
                 command->vs_params,
                 command->vs_params_len
-        ));
-        bool fs_params_diff = !prev_command || pipeline_diff
+        ))
         || prev_command->fs_params_len != command->fs_params_len
         || (0 != memcmp(
                 prev_command->fs_params,
@@ -237,17 +242,7 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
         }
 #endif
 
-        if (!prev_command
-        || vs_params_diff || fs_params_diff
-        || prev_command->vertex_buffer != command->vertex_buffer
-        || prev_command->index_buffer != command->index_buffer
-        || prev_command->index_buffer != command->index_buffer
-        || (0 != memcmp(
-                prev_command->sokol_images,
-                command->sokol_images,
-                sizeof(SokolResourceImage*) * PERIMETER_SOKOL_TEXTURES
-        ))
-        )
+        if (pipeline_diff)
 #endif
         {
 #if defined(PERIMETER_DEBUG) && 0
@@ -305,10 +300,10 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
     #endif
             bindings.index_buffer = command->index_buffer->res;
             if (pipeline->shader_fs_sampler_slot != -1) {
-                bindings.fs.samplers[pipeline->shader_fs_sampler_slot] = sampler;
+                bindings.samplers[pipeline->shader_fs_sampler_slot] = sampler;
             }
             if (pipeline->shader_fs_shadow_sampler_slot != -1) {
-                bindings.fs.samplers[pipeline->shader_fs_shadow_sampler_slot] = shadow_sampler;
+                bindings.samplers[pipeline->shader_fs_shadow_sampler_slot] = shadow_sampler;
             }
             
             //Bind images
@@ -325,29 +320,21 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
                     continue;
                 }
     #endif
-                bindings.fs.images[fs_slot] = image->res;
+                bindings.images[fs_slot] = image->res;
             }
             sg_apply_bindings(&bindings);
             
-            //Apply VS uniforms
-#ifdef CMDS_COMPARE_PREV_COMMAND
-            if (vs_params_diff)
-#endif
+            //Apply VS/FS uniforms
             if (0 <= pipeline->vs_params_slot) {
                 xxassert(command->vs_params, "No vs parameters set in command");
                 sg_apply_uniforms(
-                        SG_SHADERSTAGE_VS,
                         pipeline->vs_params_slot,
                         sg_range { command->vs_params, command->vs_params_len }
                 );
             }
-#ifdef CMDS_COMPARE_PREV_COMMAND
-            if (fs_params_diff)
-#endif
             if (0 <= pipeline->fs_params_slot) {
                 xxassert(command->fs_params, "No fs parameters set in command");
                 sg_apply_uniforms(
-                        SG_SHADERSTAGE_FS,
                         pipeline->fs_params_slot,
                         sg_range { command->fs_params, command->fs_params_len }
                 );

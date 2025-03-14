@@ -4,7 +4,7 @@ OPTION(OPTION_PROCESS_SHADERS "Re-Process game shaders" OFF)
 #Include Sokol
 FetchContent_Declare(sokol
         GIT_REPOSITORY    https://github.com/floooh/sokol
-        GIT_TAG           "4bda1469d3b311af03a34dd956460776c920dc2e"
+        GIT_TAG           "a664303c9d85edc2216920b0f8a6d1e3b834bbba"
         GIT_SHALLOW       OFF
 )
 FetchContent_MakeAvailable(sokol)
@@ -12,7 +12,7 @@ FetchContent_MakeAvailable(sokol)
 #Include ImGui
 FetchContent_Declare(imgui
         GIT_REPOSITORY    https://github.com/ocornut/imgui
-        GIT_TAG           "cb16568fca5297512ff6a8f3b877f461c4323fbe"
+        GIT_TAG           "b758b8223fc789c8f1962be08ce234aaa4ccd4f4"
         GIT_SHALLOW       OFF
 )
 FetchContent_MakeAvailable(imgui)

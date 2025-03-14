@@ -3,7 +3,7 @@
 
 @vs vs
 //Uniforms
-uniform tile_map_vs_params {
+layout(binding=0) uniform tile_map_vs_params {
     mat4 un_mvp;
     mat4 un_shadow;
     vec2 un_inv_world_size;
@@ -45,14 +45,14 @@ void main() {
 
 @fs fs
 //Uniforms
-uniform tile_map_fs_params {
+layout(binding=1) uniform tile_map_fs_params {
     vec4 un_tile_color;
 };
-uniform sampler un_sampler0;
-uniform sampler un_sampler1; //shadow sampler
-uniform texture2D un_tex0; // shadow map
-uniform texture2D un_tex1; // diffuse
-uniform texture2D un_tex2; // light map
+layout(binding=2) uniform sampler un_sampler0;
+layout(binding=3) uniform sampler un_sampler1; //shadow sampler
+layout(binding=4) uniform texture2D un_tex0; // shadow map
+layout(binding=5) uniform texture2D un_tex1; // diffuse
+layout(binding=6) uniform texture2D un_tex2; // light map
 
 //Fragment shader inputs from Vertex shader
 layout(location=0) in vec3 fs_uv0; // shadow map 1

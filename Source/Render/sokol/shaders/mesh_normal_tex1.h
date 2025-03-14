@@ -11,29 +11,27 @@
     =========
     Shader program: 'program':
         Get shader desc: mesh_normal_tex1_program_shader_desc(sg_query_backend());
-        Vertex shader: vs
-            Attributes:
-                ATTR_mesh_normal_tex1_vs_vs_position => 0
-                ATTR_mesh_normal_tex1_vs_vs_normal => 1
-                ATTR_mesh_normal_tex1_vs_vs_texcoord0 => 2
-            Uniform block 'mesh_normal_texture_vs_params':
-                C struct: mesh_normal_tex1_mesh_normal_texture_vs_params_t
-                Bind slot: SLOT_mesh_normal_tex1_mesh_normal_texture_vs_params => 0
-        Fragment shader: fs
-            Uniform block 'mesh_normal_texture_fs_params':
-                C struct: mesh_normal_tex1_mesh_normal_texture_fs_params_t
-                Bind slot: SLOT_mesh_normal_tex1_mesh_normal_texture_fs_params => 0
-            Image 'un_tex0':
-                Image type: SG_IMAGETYPE_2D
-                Sample type: SG_IMAGESAMPLETYPE_FLOAT
-                Multisampled: false
-                Bind slot: SLOT_mesh_normal_tex1_un_tex0 => 0
-            Sampler 'un_sampler0':
-                Type: SG_SAMPLERTYPE_FILTERING
-                Bind slot: SLOT_mesh_normal_tex1_un_sampler0 => 0
-            Image Sampler Pair 'un_tex0_un_sampler0':
-                Image: un_tex0
-                Sampler: un_sampler0
+        Vertex Shader: vs
+        Fragment Shader: fs
+        Attributes:
+            ATTR_mesh_normal_tex1_program_vs_position => 0
+            ATTR_mesh_normal_tex1_program_vs_normal => 1
+            ATTR_mesh_normal_tex1_program_vs_texcoord0 => 2
+    Bindings:
+        Uniform block 'mesh_normal_texture_vs_params':
+            C struct: mesh_normal_tex1_mesh_normal_texture_vs_params_t
+            Bind slot: UB_mesh_normal_tex1_mesh_normal_texture_vs_params => 0
+        Uniform block 'mesh_normal_texture_fs_params':
+            C struct: mesh_normal_tex1_mesh_normal_texture_fs_params_t
+            Bind slot: UB_mesh_normal_tex1_mesh_normal_texture_fs_params => 1
+        Image 'un_tex0':
+            Image type: SG_IMAGETYPE_2D
+            Sample type: SG_IMAGESAMPLETYPE_FLOAT
+            Multisampled: false
+            Bind slot: IMG_mesh_normal_tex1_un_tex0 => 3
+        Sampler 'un_sampler0':
+            Type: SG_SAMPLERTYPE_FILTERING
+            Bind slot: SMP_mesh_normal_tex1_un_sampler0 => 2
 */
 #if !defined(SOKOL_GFX_INCLUDED)
 #error "Please include sokol_gfx.h before mesh_normal_tex1.h"
@@ -45,13 +43,13 @@
 #define SOKOL_SHDC_ALIGN(a) __attribute__((aligned(a)))
 #endif
 #endif
-#define ATTR_mesh_normal_tex1_vs_vs_position (0)
-#define ATTR_mesh_normal_tex1_vs_vs_normal (1)
-#define ATTR_mesh_normal_tex1_vs_vs_texcoord0 (2)
-#define SLOT_mesh_normal_tex1_mesh_normal_texture_vs_params (0)
-#define SLOT_mesh_normal_tex1_mesh_normal_texture_fs_params (0)
-#define SLOT_mesh_normal_tex1_un_tex0 (0)
-#define SLOT_mesh_normal_tex1_un_sampler0 (0)
+#define ATTR_mesh_normal_tex1_program_vs_position (0)
+#define ATTR_mesh_normal_tex1_program_vs_normal (1)
+#define ATTR_mesh_normal_tex1_program_vs_texcoord0 (2)
+#define UB_mesh_normal_tex1_mesh_normal_texture_vs_params (0)
+#define UB_mesh_normal_tex1_mesh_normal_texture_fs_params (1)
+#define IMG_mesh_normal_tex1_un_tex0 (3)
+#define SMP_mesh_normal_tex1_un_sampler0 (2)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct mesh_normal_tex1_mesh_normal_texture_vs_params_t {
     Mat4f un_mvp;
@@ -2209,63 +2207,65 @@ static inline const sg_shader_desc* mesh_normal_tex1_program_shader_desc(sg_back
         static bool valid;
         if (!valid) {
             valid = true;
-            desc.attrs[0].name = "vs_position";
-            desc.attrs[1].name = "vs_normal";
-            desc.attrs[2].name = "vs_texcoord0";
-            desc.vs.source = (const char*)mesh_normal_tex1_vs_source_glsl410;
-            desc.vs.entry = "main";
-            desc.vs.uniform_blocks[0].size = 192;
-            desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.vs.uniform_blocks[0].uniforms[0].name = "mesh_normal_texture_vs_params";
-            desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.vs.uniform_blocks[0].uniforms[0].array_count = 12;
-            desc.fs.source = (const char*)mesh_normal_tex1_fs_source_glsl410;
-            desc.fs.entry = "main";
-            desc.fs.uniform_blocks[0].size = 144;
-            desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.uniform_blocks[0].uniforms[0].name = "_129.diffuse";
-            desc.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[0].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[1].name = "_129.ambient";
-            desc.fs.uniform_blocks[0].uniforms[1].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[1].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[2].name = "_129.specular";
-            desc.fs.uniform_blocks[0].uniforms[2].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[2].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[3].name = "_129.emissive";
-            desc.fs.uniform_blocks[0].uniforms[3].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[3].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[4].name = "_129.light_dir";
-            desc.fs.uniform_blocks[0].uniforms[4].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[4].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[5].name = "_129.light_diffuse";
-            desc.fs.uniform_blocks[0].uniforms[5].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[5].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[6].name = "_129.light_ambient";
-            desc.fs.uniform_blocks[0].uniforms[6].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[6].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[7].name = "_129.light_specular";
-            desc.fs.uniform_blocks[0].uniforms[7].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[7].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[8].name = "_129.spec_power";
-            desc.fs.uniform_blocks[0].uniforms[8].type = SG_UNIFORMTYPE_FLOAT;
-            desc.fs.uniform_blocks[0].uniforms[8].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[9].name = "_129.un_alpha_test";
-            desc.fs.uniform_blocks[0].uniforms[9].type = SG_UNIFORMTYPE_FLOAT;
-            desc.fs.uniform_blocks[0].uniforms[9].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[10].name = "_129.material";
-            desc.fs.uniform_blocks[0].uniforms[10].type = SG_UNIFORMTYPE_INT;
-            desc.fs.uniform_blocks[0].uniforms[10].array_count = 0;
-            desc.fs.images[0].used = true;
-            desc.fs.images[0].multisampled = false;
-            desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-            desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-            desc.fs.samplers[0].used = true;
-            desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-            desc.fs.image_sampler_pairs[0].used = true;
-            desc.fs.image_sampler_pairs[0].image_slot = 0;
-            desc.fs.image_sampler_pairs[0].sampler_slot = 0;
-            desc.fs.image_sampler_pairs[0].glsl_name = "un_tex0_un_sampler0";
+            desc.vertex_func.source = (const char*)mesh_normal_tex1_vs_source_glsl410;
+            desc.vertex_func.entry = "main";
+            desc.fragment_func.source = (const char*)mesh_normal_tex1_fs_source_glsl410;
+            desc.fragment_func.entry = "main";
+            desc.attrs[0].glsl_name = "vs_position";
+            desc.attrs[1].glsl_name = "vs_normal";
+            desc.attrs[2].glsl_name = "vs_texcoord0";
+            desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
+            desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[0].size = 192;
+            desc.uniform_blocks[0].glsl_uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[0].glsl_uniforms[0].array_count = 12;
+            desc.uniform_blocks[0].glsl_uniforms[0].glsl_name = "mesh_normal_texture_vs_params";
+            desc.uniform_blocks[1].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.uniform_blocks[1].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[1].size = 144;
+            desc.uniform_blocks[1].glsl_uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[0].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[0].glsl_name = "_129.diffuse";
+            desc.uniform_blocks[1].glsl_uniforms[1].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[1].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[1].glsl_name = "_129.ambient";
+            desc.uniform_blocks[1].glsl_uniforms[2].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[2].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[2].glsl_name = "_129.specular";
+            desc.uniform_blocks[1].glsl_uniforms[3].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[3].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[3].glsl_name = "_129.emissive";
+            desc.uniform_blocks[1].glsl_uniforms[4].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[4].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[4].glsl_name = "_129.light_dir";
+            desc.uniform_blocks[1].glsl_uniforms[5].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[5].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[5].glsl_name = "_129.light_diffuse";
+            desc.uniform_blocks[1].glsl_uniforms[6].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[6].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[6].glsl_name = "_129.light_ambient";
+            desc.uniform_blocks[1].glsl_uniforms[7].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[7].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[7].glsl_name = "_129.light_specular";
+            desc.uniform_blocks[1].glsl_uniforms[8].type = SG_UNIFORMTYPE_FLOAT;
+            desc.uniform_blocks[1].glsl_uniforms[8].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[8].glsl_name = "_129.spec_power";
+            desc.uniform_blocks[1].glsl_uniforms[9].type = SG_UNIFORMTYPE_FLOAT;
+            desc.uniform_blocks[1].glsl_uniforms[9].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[9].glsl_name = "_129.un_alpha_test";
+            desc.uniform_blocks[1].glsl_uniforms[10].type = SG_UNIFORMTYPE_INT;
+            desc.uniform_blocks[1].glsl_uniforms[10].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[10].glsl_name = "_129.material";
+            desc.images[3].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.images[3].image_type = SG_IMAGETYPE_2D;
+            desc.images[3].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+            desc.images[3].multisampled = false;
+            desc.samplers[2].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.samplers[2].sampler_type = SG_SAMPLERTYPE_FILTERING;
+            desc.image_sampler_pairs[0].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.image_sampler_pairs[0].image_slot = 3;
+            desc.image_sampler_pairs[0].sampler_slot = 2;
+            desc.image_sampler_pairs[0].glsl_name = "un_tex0_un_sampler0";
             desc.label = "mesh_normal_tex1_program_shader";
         }
         return &desc;
@@ -2277,63 +2277,65 @@ static inline const sg_shader_desc* mesh_normal_tex1_program_shader_desc(sg_back
         static bool valid;
         if (!valid) {
             valid = true;
-            desc.attrs[0].name = "vs_position";
-            desc.attrs[1].name = "vs_normal";
-            desc.attrs[2].name = "vs_texcoord0";
-            desc.vs.source = (const char*)mesh_normal_tex1_vs_source_glsl300es;
-            desc.vs.entry = "main";
-            desc.vs.uniform_blocks[0].size = 192;
-            desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.vs.uniform_blocks[0].uniforms[0].name = "mesh_normal_texture_vs_params";
-            desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.vs.uniform_blocks[0].uniforms[0].array_count = 12;
-            desc.fs.source = (const char*)mesh_normal_tex1_fs_source_glsl300es;
-            desc.fs.entry = "main";
-            desc.fs.uniform_blocks[0].size = 144;
-            desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.uniform_blocks[0].uniforms[0].name = "_129.diffuse";
-            desc.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[0].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[1].name = "_129.ambient";
-            desc.fs.uniform_blocks[0].uniforms[1].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[1].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[2].name = "_129.specular";
-            desc.fs.uniform_blocks[0].uniforms[2].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[2].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[3].name = "_129.emissive";
-            desc.fs.uniform_blocks[0].uniforms[3].type = SG_UNIFORMTYPE_FLOAT4;
-            desc.fs.uniform_blocks[0].uniforms[3].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[4].name = "_129.light_dir";
-            desc.fs.uniform_blocks[0].uniforms[4].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[4].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[5].name = "_129.light_diffuse";
-            desc.fs.uniform_blocks[0].uniforms[5].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[5].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[6].name = "_129.light_ambient";
-            desc.fs.uniform_blocks[0].uniforms[6].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[6].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[7].name = "_129.light_specular";
-            desc.fs.uniform_blocks[0].uniforms[7].type = SG_UNIFORMTYPE_FLOAT3;
-            desc.fs.uniform_blocks[0].uniforms[7].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[8].name = "_129.spec_power";
-            desc.fs.uniform_blocks[0].uniforms[8].type = SG_UNIFORMTYPE_FLOAT;
-            desc.fs.uniform_blocks[0].uniforms[8].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[9].name = "_129.un_alpha_test";
-            desc.fs.uniform_blocks[0].uniforms[9].type = SG_UNIFORMTYPE_FLOAT;
-            desc.fs.uniform_blocks[0].uniforms[9].array_count = 0;
-            desc.fs.uniform_blocks[0].uniforms[10].name = "_129.material";
-            desc.fs.uniform_blocks[0].uniforms[10].type = SG_UNIFORMTYPE_INT;
-            desc.fs.uniform_blocks[0].uniforms[10].array_count = 0;
-            desc.fs.images[0].used = true;
-            desc.fs.images[0].multisampled = false;
-            desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-            desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-            desc.fs.samplers[0].used = true;
-            desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-            desc.fs.image_sampler_pairs[0].used = true;
-            desc.fs.image_sampler_pairs[0].image_slot = 0;
-            desc.fs.image_sampler_pairs[0].sampler_slot = 0;
-            desc.fs.image_sampler_pairs[0].glsl_name = "un_tex0_un_sampler0";
+            desc.vertex_func.source = (const char*)mesh_normal_tex1_vs_source_glsl300es;
+            desc.vertex_func.entry = "main";
+            desc.fragment_func.source = (const char*)mesh_normal_tex1_fs_source_glsl300es;
+            desc.fragment_func.entry = "main";
+            desc.attrs[0].glsl_name = "vs_position";
+            desc.attrs[1].glsl_name = "vs_normal";
+            desc.attrs[2].glsl_name = "vs_texcoord0";
+            desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
+            desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[0].size = 192;
+            desc.uniform_blocks[0].glsl_uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[0].glsl_uniforms[0].array_count = 12;
+            desc.uniform_blocks[0].glsl_uniforms[0].glsl_name = "mesh_normal_texture_vs_params";
+            desc.uniform_blocks[1].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.uniform_blocks[1].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[1].size = 144;
+            desc.uniform_blocks[1].glsl_uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[0].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[0].glsl_name = "_129.diffuse";
+            desc.uniform_blocks[1].glsl_uniforms[1].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[1].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[1].glsl_name = "_129.ambient";
+            desc.uniform_blocks[1].glsl_uniforms[2].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[2].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[2].glsl_name = "_129.specular";
+            desc.uniform_blocks[1].glsl_uniforms[3].type = SG_UNIFORMTYPE_FLOAT4;
+            desc.uniform_blocks[1].glsl_uniforms[3].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[3].glsl_name = "_129.emissive";
+            desc.uniform_blocks[1].glsl_uniforms[4].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[4].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[4].glsl_name = "_129.light_dir";
+            desc.uniform_blocks[1].glsl_uniforms[5].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[5].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[5].glsl_name = "_129.light_diffuse";
+            desc.uniform_blocks[1].glsl_uniforms[6].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[6].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[6].glsl_name = "_129.light_ambient";
+            desc.uniform_blocks[1].glsl_uniforms[7].type = SG_UNIFORMTYPE_FLOAT3;
+            desc.uniform_blocks[1].glsl_uniforms[7].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[7].glsl_name = "_129.light_specular";
+            desc.uniform_blocks[1].glsl_uniforms[8].type = SG_UNIFORMTYPE_FLOAT;
+            desc.uniform_blocks[1].glsl_uniforms[8].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[8].glsl_name = "_129.spec_power";
+            desc.uniform_blocks[1].glsl_uniforms[9].type = SG_UNIFORMTYPE_FLOAT;
+            desc.uniform_blocks[1].glsl_uniforms[9].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[9].glsl_name = "_129.un_alpha_test";
+            desc.uniform_blocks[1].glsl_uniforms[10].type = SG_UNIFORMTYPE_INT;
+            desc.uniform_blocks[1].glsl_uniforms[10].array_count = 0;
+            desc.uniform_blocks[1].glsl_uniforms[10].glsl_name = "_129.material";
+            desc.images[3].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.images[3].image_type = SG_IMAGETYPE_2D;
+            desc.images[3].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+            desc.images[3].multisampled = false;
+            desc.samplers[2].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.samplers[2].sampler_type = SG_SAMPLERTYPE_FILTERING;
+            desc.image_sampler_pairs[0].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.image_sampler_pairs[0].image_slot = 3;
+            desc.image_sampler_pairs[0].sampler_slot = 2;
+            desc.image_sampler_pairs[0].glsl_name = "un_tex0_un_sampler0";
             desc.label = "mesh_normal_tex1_program_shader";
         }
         return &desc;
@@ -2345,31 +2347,37 @@ static inline const sg_shader_desc* mesh_normal_tex1_program_shader_desc(sg_back
         static bool valid;
         if (!valid) {
             valid = true;
-            desc.attrs[0].sem_name = "TEXCOORD";
-            desc.attrs[0].sem_index = 0;
-            desc.attrs[1].sem_name = "TEXCOORD";
-            desc.attrs[1].sem_index = 1;
-            desc.attrs[2].sem_name = "TEXCOORD";
-            desc.attrs[2].sem_index = 2;
-            desc.vs.source = (const char*)mesh_normal_tex1_vs_source_hlsl5;
-            desc.vs.d3d11_target = "vs_5_0";
-            desc.vs.entry = "main";
-            desc.vs.uniform_blocks[0].size = 192;
-            desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.source = (const char*)mesh_normal_tex1_fs_source_hlsl5;
-            desc.fs.d3d11_target = "ps_5_0";
-            desc.fs.entry = "main";
-            desc.fs.uniform_blocks[0].size = 144;
-            desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.images[0].used = true;
-            desc.fs.images[0].multisampled = false;
-            desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-            desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-            desc.fs.samplers[0].used = true;
-            desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-            desc.fs.image_sampler_pairs[0].used = true;
-            desc.fs.image_sampler_pairs[0].image_slot = 0;
-            desc.fs.image_sampler_pairs[0].sampler_slot = 0;
+            desc.vertex_func.source = (const char*)mesh_normal_tex1_vs_source_hlsl5;
+            desc.vertex_func.d3d11_target = "vs_5_0";
+            desc.vertex_func.entry = "main";
+            desc.fragment_func.source = (const char*)mesh_normal_tex1_fs_source_hlsl5;
+            desc.fragment_func.d3d11_target = "ps_5_0";
+            desc.fragment_func.entry = "main";
+            desc.attrs[0].hlsl_sem_name = "TEXCOORD";
+            desc.attrs[0].hlsl_sem_index = 0;
+            desc.attrs[1].hlsl_sem_name = "TEXCOORD";
+            desc.attrs[1].hlsl_sem_index = 1;
+            desc.attrs[2].hlsl_sem_name = "TEXCOORD";
+            desc.attrs[2].hlsl_sem_index = 2;
+            desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
+            desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[0].size = 192;
+            desc.uniform_blocks[0].hlsl_register_b_n = 0;
+            desc.uniform_blocks[1].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.uniform_blocks[1].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[1].size = 144;
+            desc.uniform_blocks[1].hlsl_register_b_n = 0;
+            desc.images[3].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.images[3].image_type = SG_IMAGETYPE_2D;
+            desc.images[3].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+            desc.images[3].multisampled = false;
+            desc.images[3].hlsl_register_t_n = 0;
+            desc.samplers[2].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.samplers[2].sampler_type = SG_SAMPLERTYPE_FILTERING;
+            desc.samplers[2].hlsl_register_s_n = 0;
+            desc.image_sampler_pairs[0].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.image_sampler_pairs[0].image_slot = 3;
+            desc.image_sampler_pairs[0].sampler_slot = 2;
             desc.label = "mesh_normal_tex1_program_shader";
         }
         return &desc;
@@ -2381,23 +2389,29 @@ static inline const sg_shader_desc* mesh_normal_tex1_program_shader_desc(sg_back
         static bool valid;
         if (!valid) {
             valid = true;
-            desc.vs.source = (const char*)mesh_normal_tex1_vs_source_metal_macos;
-            desc.vs.entry = "main0";
-            desc.vs.uniform_blocks[0].size = 192;
-            desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.source = (const char*)mesh_normal_tex1_fs_source_metal_macos;
-            desc.fs.entry = "main0";
-            desc.fs.uniform_blocks[0].size = 144;
-            desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.images[0].used = true;
-            desc.fs.images[0].multisampled = false;
-            desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-            desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-            desc.fs.samplers[0].used = true;
-            desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-            desc.fs.image_sampler_pairs[0].used = true;
-            desc.fs.image_sampler_pairs[0].image_slot = 0;
-            desc.fs.image_sampler_pairs[0].sampler_slot = 0;
+            desc.vertex_func.source = (const char*)mesh_normal_tex1_vs_source_metal_macos;
+            desc.vertex_func.entry = "main0";
+            desc.fragment_func.source = (const char*)mesh_normal_tex1_fs_source_metal_macos;
+            desc.fragment_func.entry = "main0";
+            desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
+            desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[0].size = 192;
+            desc.uniform_blocks[0].msl_buffer_n = 0;
+            desc.uniform_blocks[1].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.uniform_blocks[1].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[1].size = 144;
+            desc.uniform_blocks[1].msl_buffer_n = 0;
+            desc.images[3].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.images[3].image_type = SG_IMAGETYPE_2D;
+            desc.images[3].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+            desc.images[3].multisampled = false;
+            desc.images[3].msl_texture_n = 0;
+            desc.samplers[2].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.samplers[2].sampler_type = SG_SAMPLERTYPE_FILTERING;
+            desc.samplers[2].msl_sampler_n = 0;
+            desc.image_sampler_pairs[0].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.image_sampler_pairs[0].image_slot = 3;
+            desc.image_sampler_pairs[0].sampler_slot = 2;
             desc.label = "mesh_normal_tex1_program_shader";
         }
         return &desc;
@@ -2409,23 +2423,29 @@ static inline const sg_shader_desc* mesh_normal_tex1_program_shader_desc(sg_back
         static bool valid;
         if (!valid) {
             valid = true;
-            desc.vs.source = (const char*)mesh_normal_tex1_vs_source_metal_ios;
-            desc.vs.entry = "main0";
-            desc.vs.uniform_blocks[0].size = 192;
-            desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.source = (const char*)mesh_normal_tex1_fs_source_metal_ios;
-            desc.fs.entry = "main0";
-            desc.fs.uniform_blocks[0].size = 144;
-            desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.images[0].used = true;
-            desc.fs.images[0].multisampled = false;
-            desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-            desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-            desc.fs.samplers[0].used = true;
-            desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-            desc.fs.image_sampler_pairs[0].used = true;
-            desc.fs.image_sampler_pairs[0].image_slot = 0;
-            desc.fs.image_sampler_pairs[0].sampler_slot = 0;
+            desc.vertex_func.source = (const char*)mesh_normal_tex1_vs_source_metal_ios;
+            desc.vertex_func.entry = "main0";
+            desc.fragment_func.source = (const char*)mesh_normal_tex1_fs_source_metal_ios;
+            desc.fragment_func.entry = "main0";
+            desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
+            desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[0].size = 192;
+            desc.uniform_blocks[0].msl_buffer_n = 0;
+            desc.uniform_blocks[1].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.uniform_blocks[1].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[1].size = 144;
+            desc.uniform_blocks[1].msl_buffer_n = 0;
+            desc.images[3].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.images[3].image_type = SG_IMAGETYPE_2D;
+            desc.images[3].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+            desc.images[3].multisampled = false;
+            desc.images[3].msl_texture_n = 0;
+            desc.samplers[2].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.samplers[2].sampler_type = SG_SAMPLERTYPE_FILTERING;
+            desc.samplers[2].msl_sampler_n = 0;
+            desc.image_sampler_pairs[0].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.image_sampler_pairs[0].image_slot = 3;
+            desc.image_sampler_pairs[0].sampler_slot = 2;
             desc.label = "mesh_normal_tex1_program_shader";
         }
         return &desc;
@@ -2437,23 +2457,29 @@ static inline const sg_shader_desc* mesh_normal_tex1_program_shader_desc(sg_back
         static bool valid;
         if (!valid) {
             valid = true;
-            desc.vs.source = (const char*)mesh_normal_tex1_vs_source_metal_sim;
-            desc.vs.entry = "main0";
-            desc.vs.uniform_blocks[0].size = 192;
-            desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.source = (const char*)mesh_normal_tex1_fs_source_metal_sim;
-            desc.fs.entry = "main0";
-            desc.fs.uniform_blocks[0].size = 144;
-            desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-            desc.fs.images[0].used = true;
-            desc.fs.images[0].multisampled = false;
-            desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
-            desc.fs.images[0].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
-            desc.fs.samplers[0].used = true;
-            desc.fs.samplers[0].sampler_type = SG_SAMPLERTYPE_FILTERING;
-            desc.fs.image_sampler_pairs[0].used = true;
-            desc.fs.image_sampler_pairs[0].image_slot = 0;
-            desc.fs.image_sampler_pairs[0].sampler_slot = 0;
+            desc.vertex_func.source = (const char*)mesh_normal_tex1_vs_source_metal_sim;
+            desc.vertex_func.entry = "main0";
+            desc.fragment_func.source = (const char*)mesh_normal_tex1_fs_source_metal_sim;
+            desc.fragment_func.entry = "main0";
+            desc.uniform_blocks[0].stage = SG_SHADERSTAGE_VERTEX;
+            desc.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[0].size = 192;
+            desc.uniform_blocks[0].msl_buffer_n = 0;
+            desc.uniform_blocks[1].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.uniform_blocks[1].layout = SG_UNIFORMLAYOUT_STD140;
+            desc.uniform_blocks[1].size = 144;
+            desc.uniform_blocks[1].msl_buffer_n = 0;
+            desc.images[3].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.images[3].image_type = SG_IMAGETYPE_2D;
+            desc.images[3].sample_type = SG_IMAGESAMPLETYPE_FLOAT;
+            desc.images[3].multisampled = false;
+            desc.images[3].msl_texture_n = 0;
+            desc.samplers[2].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.samplers[2].sampler_type = SG_SAMPLERTYPE_FILTERING;
+            desc.samplers[2].msl_sampler_n = 0;
+            desc.image_sampler_pairs[0].stage = SG_SHADERSTAGE_FRAGMENT;
+            desc.image_sampler_pairs[0].image_slot = 3;
+            desc.image_sampler_pairs[0].sampler_slot = 2;
             desc.label = "mesh_normal_tex1_program_shader";
         }
         return &desc;
@@ -2474,208 +2500,188 @@ static inline int mesh_normal_tex1_program_attr_slot(const char* attr_name) {
     }
     return -1;
 }
-static inline int mesh_normal_tex1_program_image_slot(sg_shader_stage stage, const char* img_name) {
-    (void)stage; (void)img_name;
-    if (SG_SHADERSTAGE_FS == stage) {
-        if (0 == strcmp(img_name, "un_tex0")) {
-            return 0;
-        }
+static inline int mesh_normal_tex1_program_image_slot(const char* img_name) {
+    (void)img_name;
+    if (0 == strcmp(img_name, "un_tex0")) {
+        return 3;
     }
     return -1;
 }
-static inline int mesh_normal_tex1_program_sampler_slot(sg_shader_stage stage, const char* smp_name) {
-    (void)stage; (void)smp_name;
-    if (SG_SHADERSTAGE_FS == stage) {
-        if (0 == strcmp(smp_name, "un_sampler0")) {
-            return 0;
-        }
+static inline int mesh_normal_tex1_program_sampler_slot(const char* smp_name) {
+    (void)smp_name;
+    if (0 == strcmp(smp_name, "un_sampler0")) {
+        return 2;
     }
     return -1;
 }
-static inline int mesh_normal_tex1_program_uniformblock_slot(sg_shader_stage stage, const char* ub_name) {
-    (void)stage; (void)ub_name;
-    if (SG_SHADERSTAGE_VS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
-            return 0;
-        }
+static inline int mesh_normal_tex1_program_uniformblock_slot(const char* ub_name) {
+    (void)ub_name;
+    if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
+        return 0;
     }
-    if (SG_SHADERSTAGE_FS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
-            return 0;
-        }
+    if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
+        return 1;
     }
     return -1;
 }
-static inline size_t mesh_normal_tex1_program_uniformblock_size(sg_shader_stage stage, const char* ub_name) {
-    (void)stage; (void)ub_name;
-    if (SG_SHADERSTAGE_VS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
-            return sizeof(mesh_normal_tex1_mesh_normal_texture_vs_params_t);
-        }
+static inline size_t mesh_normal_tex1_program_uniformblock_size(const char* ub_name) {
+    (void)ub_name;
+    if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
+        return sizeof(mesh_normal_tex1_mesh_normal_texture_vs_params_t);
     }
-    if (SG_SHADERSTAGE_FS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
-            return sizeof(mesh_normal_tex1_mesh_normal_texture_fs_params_t);
-        }
+    if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
+        return sizeof(mesh_normal_tex1_mesh_normal_texture_fs_params_t);
     }
     return 0;
 }
-static inline int mesh_normal_tex1_program_uniform_offset(sg_shader_stage stage, const char* ub_name, const char* u_name) {
-    (void)stage; (void)ub_name; (void)u_name;
-    if (SG_SHADERSTAGE_VS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
-            if (0 == strcmp(u_name, "un_mvp")) {
-                return 0;
-            }
-            if (0 == strcmp(u_name, "model")) {
-                return 64;
-            }
-            if (0 == strcmp(u_name, "tex0_mat")) {
-                return 128;
-            }
+static inline int mesh_normal_tex1_program_uniform_offset(const char* ub_name, const char* u_name) {
+    (void)ub_name; (void)u_name;
+    if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
+        if (0 == strcmp(u_name, "un_mvp")) {
+            return 0;
+        }
+        if (0 == strcmp(u_name, "model")) {
+            return 64;
+        }
+        if (0 == strcmp(u_name, "tex0_mat")) {
+            return 128;
         }
     }
-    if (SG_SHADERSTAGE_FS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
-            if (0 == strcmp(u_name, "diffuse")) {
-                return 0;
-            }
-            if (0 == strcmp(u_name, "ambient")) {
-                return 16;
-            }
-            if (0 == strcmp(u_name, "specular")) {
-                return 32;
-            }
-            if (0 == strcmp(u_name, "emissive")) {
-                return 48;
-            }
-            if (0 == strcmp(u_name, "light_dir")) {
-                return 64;
-            }
-            if (0 == strcmp(u_name, "light_diffuse")) {
-                return 80;
-            }
-            if (0 == strcmp(u_name, "light_ambient")) {
-                return 96;
-            }
-            if (0 == strcmp(u_name, "light_specular")) {
-                return 112;
-            }
-            if (0 == strcmp(u_name, "spec_power")) {
-                return 124;
-            }
-            if (0 == strcmp(u_name, "un_alpha_test")) {
-                return 128;
-            }
-            if (0 == strcmp(u_name, "material")) {
-                return 132;
-            }
+    if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
+        if (0 == strcmp(u_name, "diffuse")) {
+            return 0;
+        }
+        if (0 == strcmp(u_name, "ambient")) {
+            return 16;
+        }
+        if (0 == strcmp(u_name, "specular")) {
+            return 32;
+        }
+        if (0 == strcmp(u_name, "emissive")) {
+            return 48;
+        }
+        if (0 == strcmp(u_name, "light_dir")) {
+            return 64;
+        }
+        if (0 == strcmp(u_name, "light_diffuse")) {
+            return 80;
+        }
+        if (0 == strcmp(u_name, "light_ambient")) {
+            return 96;
+        }
+        if (0 == strcmp(u_name, "light_specular")) {
+            return 112;
+        }
+        if (0 == strcmp(u_name, "spec_power")) {
+            return 124;
+        }
+        if (0 == strcmp(u_name, "un_alpha_test")) {
+            return 128;
+        }
+        if (0 == strcmp(u_name, "material")) {
+            return 132;
         }
     }
     return -1;
 }
-static inline sg_shader_uniform_desc mesh_normal_tex1_program_uniform_desc(sg_shader_stage stage, const char* ub_name, const char* u_name) {
-    (void)stage; (void)ub_name; (void)u_name;
+static inline sg_glsl_shader_uniform mesh_normal_tex1_program_uniform_desc(const char* ub_name, const char* u_name) {
+    (void)ub_name; (void)u_name;
     #if defined(__cplusplus)
-    sg_shader_uniform_desc desc = {};
+    sg_glsl_shader_uniform res = {};
     #else
-    sg_shader_uniform_desc desc = {0};
+    sg_glsl_shader_uniform res = {0};
     #endif
-    if (SG_SHADERSTAGE_VS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
-            if (0 == strcmp(u_name, "un_mvp")) {
-                desc.name = "un_mvp";
-                desc.type = SG_UNIFORMTYPE_MAT4;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "model")) {
-                desc.name = "model";
-                desc.type = SG_UNIFORMTYPE_MAT4;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "tex0_mat")) {
-                desc.name = "tex0_mat";
-                desc.type = SG_UNIFORMTYPE_MAT4;
-                desc.array_count = 0;
-                return desc;
-            }
+    if (0 == strcmp(ub_name, "mesh_normal_texture_vs_params")) {
+        if (0 == strcmp(u_name, "un_mvp")) {
+            res.type = SG_UNIFORMTYPE_MAT4;
+            res.array_count = 0;
+            res.glsl_name = "un_mvp";
+            return res;
+        }
+        if (0 == strcmp(u_name, "model")) {
+            res.type = SG_UNIFORMTYPE_MAT4;
+            res.array_count = 0;
+            res.glsl_name = "model";
+            return res;
+        }
+        if (0 == strcmp(u_name, "tex0_mat")) {
+            res.type = SG_UNIFORMTYPE_MAT4;
+            res.array_count = 0;
+            res.glsl_name = "tex0_mat";
+            return res;
         }
     }
-    if (SG_SHADERSTAGE_FS == stage) {
-        if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
-            if (0 == strcmp(u_name, "diffuse")) {
-                desc.name = "diffuse";
-                desc.type = SG_UNIFORMTYPE_FLOAT4;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "ambient")) {
-                desc.name = "ambient";
-                desc.type = SG_UNIFORMTYPE_FLOAT4;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "specular")) {
-                desc.name = "specular";
-                desc.type = SG_UNIFORMTYPE_FLOAT4;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "emissive")) {
-                desc.name = "emissive";
-                desc.type = SG_UNIFORMTYPE_FLOAT4;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "light_dir")) {
-                desc.name = "light_dir";
-                desc.type = SG_UNIFORMTYPE_FLOAT3;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "light_diffuse")) {
-                desc.name = "light_diffuse";
-                desc.type = SG_UNIFORMTYPE_FLOAT3;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "light_ambient")) {
-                desc.name = "light_ambient";
-                desc.type = SG_UNIFORMTYPE_FLOAT3;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "light_specular")) {
-                desc.name = "light_specular";
-                desc.type = SG_UNIFORMTYPE_FLOAT3;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "spec_power")) {
-                desc.name = "spec_power";
-                desc.type = SG_UNIFORMTYPE_FLOAT;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "un_alpha_test")) {
-                desc.name = "un_alpha_test";
-                desc.type = SG_UNIFORMTYPE_FLOAT;
-                desc.array_count = 0;
-                return desc;
-            }
-            if (0 == strcmp(u_name, "material")) {
-                desc.name = "material";
-                desc.type = SG_UNIFORMTYPE_INT;
-                desc.array_count = 0;
-                return desc;
-            }
+    if (0 == strcmp(ub_name, "mesh_normal_texture_fs_params")) {
+        if (0 == strcmp(u_name, "diffuse")) {
+            res.type = SG_UNIFORMTYPE_FLOAT4;
+            res.array_count = 0;
+            res.glsl_name = "diffuse";
+            return res;
+        }
+        if (0 == strcmp(u_name, "ambient")) {
+            res.type = SG_UNIFORMTYPE_FLOAT4;
+            res.array_count = 0;
+            res.glsl_name = "ambient";
+            return res;
+        }
+        if (0 == strcmp(u_name, "specular")) {
+            res.type = SG_UNIFORMTYPE_FLOAT4;
+            res.array_count = 0;
+            res.glsl_name = "specular";
+            return res;
+        }
+        if (0 == strcmp(u_name, "emissive")) {
+            res.type = SG_UNIFORMTYPE_FLOAT4;
+            res.array_count = 0;
+            res.glsl_name = "emissive";
+            return res;
+        }
+        if (0 == strcmp(u_name, "light_dir")) {
+            res.type = SG_UNIFORMTYPE_FLOAT3;
+            res.array_count = 0;
+            res.glsl_name = "light_dir";
+            return res;
+        }
+        if (0 == strcmp(u_name, "light_diffuse")) {
+            res.type = SG_UNIFORMTYPE_FLOAT3;
+            res.array_count = 0;
+            res.glsl_name = "light_diffuse";
+            return res;
+        }
+        if (0 == strcmp(u_name, "light_ambient")) {
+            res.type = SG_UNIFORMTYPE_FLOAT3;
+            res.array_count = 0;
+            res.glsl_name = "light_ambient";
+            return res;
+        }
+        if (0 == strcmp(u_name, "light_specular")) {
+            res.type = SG_UNIFORMTYPE_FLOAT3;
+            res.array_count = 0;
+            res.glsl_name = "light_specular";
+            return res;
+        }
+        if (0 == strcmp(u_name, "spec_power")) {
+            res.type = SG_UNIFORMTYPE_FLOAT;
+            res.array_count = 0;
+            res.glsl_name = "spec_power";
+            return res;
+        }
+        if (0 == strcmp(u_name, "un_alpha_test")) {
+            res.type = SG_UNIFORMTYPE_FLOAT;
+            res.array_count = 0;
+            res.glsl_name = "un_alpha_test";
+            return res;
+        }
+        if (0 == strcmp(u_name, "material")) {
+            res.type = SG_UNIFORMTYPE_INT;
+            res.array_count = 0;
+            res.glsl_name = "material";
+            return res;
         }
     }
-    return desc;
+    return res;
 }
-static inline int mesh_normal_tex1_program_storagebuffer_slot(sg_shader_stage stage, const char* sbuf_name) {
-    (void)stage; (void)sbuf_name;
+static inline int mesh_normal_tex1_program_storagebuffer_slot(const char* sbuf_name) {
+    (void)sbuf_name;
     return -1;
 }

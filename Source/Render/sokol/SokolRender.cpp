@@ -80,12 +80,17 @@ int cSokolRender::Init(int xScr, int yScr, int mode, SDL_Window* wnd, int Refres
     desc.uniform_buffer_size = 1024 * 1024 * 32;
     desc.image_pool_size = 1024 * 4; //1024 is enough for PGW+PET game
     desc.logger.func = slog_func;
+    desc.environment.defaults.color_format = SG_PIXELFORMAT_RGBA8;
+    desc.environment.defaults.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
+    desc.environment.defaults.sample_count = 1;
     
     //Setup swapchain and fill color
     swapchain = {};
     swapchain.width = ScreenSize.x;
     swapchain.height = ScreenSize.y;
-    swapchain.sample_count = 1;
+    swapchain.color_format = desc.environment.defaults.color_format;
+    swapchain.depth_format = desc.environment.defaults.depth_format;
+    swapchain.sample_count = desc.environment.defaults.sample_count;
     fill_color = sg_color { 0.0f, 0.0f, 0.0f, 1.0f };
 
     //OpenGL / OpenGLES

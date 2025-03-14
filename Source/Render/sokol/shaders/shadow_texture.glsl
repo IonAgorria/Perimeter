@@ -5,7 +5,7 @@
 @glsl_options fixup_clipspace // important: map clipspace z from -1..+1 to 0..+1 on GL
 
 //Uniforms
-uniform shadow_texture_vs_params {
+layout(binding=0) uniform shadow_texture_vs_params {
     mat4 un_mvp;
 };
 
@@ -30,11 +30,11 @@ void main() {
 @fs fs
 
 //Uniforms
-uniform shadow_texture_fs_params {
+layout(binding=1) uniform shadow_texture_fs_params {
     float un_alpha_test;
 };
-uniform sampler un_sampler0;
-uniform texture2D un_tex0;
+layout(binding=2) uniform sampler un_sampler0;
+layout(binding=3) uniform texture2D un_tex0;
 
 //Fragment shader inputs from Vertex shader
 layout(location=0) in vec2 fs_uv0;

@@ -230,15 +230,15 @@ void cSokolRender::RegisterPipeline(SokolPipelineContext context) {
 
     //Check for any missing slots
     if (context.vertex_fmt & VERTEX_FMT_TEX1 &&
-        context.shader_funcs->image_slot(SG_SHADERSTAGE_FS, "un_tex0") < 0) {
+        context.shader_funcs->image_slot("un_tex0") < 0) {
         fprintf(stderr, "RegisterPipeline: 'un_tex0' image slot not found at pipeline '%s'\n", desc.label);
     }
     if (context.vertex_fmt & VERTEX_FMT_TEX2) {
-        if (context.shader_funcs->image_slot(SG_SHADERSTAGE_FS, "un_tex1") < 0) {
+        if (context.shader_funcs->image_slot("un_tex1") < 0) {
             fprintf(stderr, "RegisterPipeline: 'un_tex1' image slot not found at pipeline '%s'\n", desc.label);
         }
     }
-    if (context.vertex_fmt & VERTEX_FMT_TEX1 && context.shader_funcs->sampler_slot(SG_SHADERSTAGE_FS, "un_sampler0") < 0) {
+    if (context.vertex_fmt & VERTEX_FMT_TEX1 && context.shader_funcs->sampler_slot("un_sampler0") < 0) {
         fprintf(stderr, "RegisterPipeline: 'un_sampler0' sampler slot not found at pipeline '%s'\n", desc.label);
     }
     
@@ -310,13 +310,13 @@ void cSokolRender::RegisterPipeline(SokolPipelineContext context) {
     }
 
     if (vs_params_name) {
-        pipeline->vs_params_slot = context.shader_funcs->uniformblock_slot(SG_SHADERSTAGE_VS, vs_params_name);
+        pipeline->vs_params_slot = context.shader_funcs->uniformblock_slot(vs_params_name);
         if (0 > pipeline->vs_params_slot) {
             fprintf(stderr, "RegisterPipeline: '%s' vs uniform slot not found at pipeline '%s'\n", vs_params_name,
                     desc.label);
             xassert(0);
             return;
-        } else if (context.shader_funcs->uniformblock_size(SG_SHADERSTAGE_VS, vs_params_name) != vs_params_size) {
+        } else if (context.shader_funcs->uniformblock_size(vs_params_name) != vs_params_size) {
             fprintf(stderr, "RegisterPipeline: '%s' vs uniform size doesnt match at pipeline '%s'\n",
                     vs_params_name, desc.label);
             xassert(0);
@@ -324,13 +324,13 @@ void cSokolRender::RegisterPipeline(SokolPipelineContext context) {
         }
     }
     if (fs_params_name) {
-        pipeline->fs_params_slot = context.shader_funcs->uniformblock_slot(SG_SHADERSTAGE_FS, fs_params_name);
+        pipeline->fs_params_slot = context.shader_funcs->uniformblock_slot(fs_params_name);
         if (0 > pipeline->fs_params_slot) {
             fprintf(stderr, "RegisterPipeline: '%s' fs uniform slot not found at pipeline '%s'\n",
                     fs_params_name, desc.label);
             xassert(0);
             return;
-        } else if (context.shader_funcs->uniformblock_size(SG_SHADERSTAGE_FS, fs_params_name) != fs_params_size) {
+        } else if (context.shader_funcs->uniformblock_size(fs_params_name) != fs_params_size) {
             fprintf(stderr, "RegisterPipeline: '%s' fs uniform size doesnt match at pipeline '%s'\n",
                     fs_params_name, desc.label);
             xassert(0);
@@ -339,10 +339,10 @@ void cSokolRender::RegisterPipeline(SokolPipelineContext context) {
     }
     for (int i = 0; i < PERIMETER_SOKOL_TEXTURES; ++i) {
         std::string name = "un_tex" + std::to_string(i);
-        pipeline->shader_fs_texture_slot[i] = context.shader_funcs->image_slot(SG_SHADERSTAGE_FS, name.c_str());
+        pipeline->shader_fs_texture_slot[i] = context.shader_funcs->image_slot(name.c_str());
     }
-    pipeline->shader_fs_sampler_slot = context.shader_funcs->sampler_slot(SG_SHADERSTAGE_FS, "un_sampler0");
-    pipeline->shader_fs_shadow_sampler_slot = context.shader_funcs->sampler_slot(SG_SHADERSTAGE_FS, "un_sampler1");
+    pipeline->shader_fs_sampler_slot = context.shader_funcs->sampler_slot("un_sampler0");
+    pipeline->shader_fs_shadow_sampler_slot = context.shader_funcs->sampler_slot("un_sampler1");
     if (pipelines.size() + 1 > PERIMETER_SOKOL_PIPELINES_MAX) {
         fprintf(stderr, "RegisterPipeline: reached maximum amount of registered pipelines\n");
         xassert(0);
