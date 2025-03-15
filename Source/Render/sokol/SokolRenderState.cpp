@@ -1046,15 +1046,11 @@ uint32_t cSokolRender::GetMaxTextureSlots() {
 void cSokolRender::SetRenderTarget(cTexture* target, SurfaceImage zbuffer) {
     if (target == shadowMapRenderTarget->texture) {
         activeRenderTarget = shadowMapRenderTarget;
-        return;
-    }
-
-    if (target == lightMapRenderTarget->texture) {
+    } else if (target == lightMapRenderTarget->texture) {
         activeRenderTarget = lightMapRenderTarget;
-        return;
+    } else {
+        xxassert(false, "Unexpected render target");
     }
-
-    xxassert(false, "Unexpected render target");
 }
 
 void cSokolRender::RestoreRenderTarget() {
