@@ -4,7 +4,7 @@ OPTION(OPTION_PROCESS_SHADERS "Re-Process game shaders" OFF)
 #Include Sokol
 FetchContent_Declare(sokol
         GIT_REPOSITORY    https://github.com/floooh/sokol
-        GIT_TAG           "4bda1469d3b311af03a34dd956460776c920dc2e"
+        GIT_TAG           "4c855e0867d483fc167d56bb1f07960688e1c06f"
         GIT_SHALLOW       OFF
 )
 FetchContent_MakeAvailable(sokol)
@@ -12,7 +12,7 @@ FetchContent_MakeAvailable(sokol)
 #Include ImGui
 FetchContent_Declare(imgui
         GIT_REPOSITORY    https://github.com/ocornut/imgui
-        GIT_TAG           "cb16568fca5297512ff6a8f3b877f461c4323fbe"
+        GIT_TAG           "fd75bdccb033e74afeba44f500edc8fcef7eb023"
         GIT_SHALLOW       OFF
 )
 FetchContent_MakeAvailable(imgui)
@@ -21,7 +21,7 @@ IF (OPTION_PROCESS_SHADERS)
     #Download precompiled sokol-shdc
     FetchContent_Declare(sokol-tools-bin
             GIT_REPOSITORY    https://github.com/floooh/sokol-tools-bin
-            GIT_TAG           "f1af4529746b804d6c79d5a36c333aec489fab27"
+            GIT_TAG           "c240bd1d17d4192572ee6e0cdb6e2477e4a7df80"
             GIT_SHALLOW       OFF
     )
     FetchContent_MakeAvailable(sokol-tools-bin)
