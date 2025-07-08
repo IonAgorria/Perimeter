@@ -7,10 +7,10 @@ struct shader_funcs {
     SOKOL_SHADER_ID (*get_id)() = nullptr;
     const sg_shader_desc* (*shader_desc)(sg_backend) = nullptr;
     int (*attr_slot)(const char*) = nullptr;
-    int (*image_slot)(sg_shader_stage, const char*) = nullptr;
-    int (*sampler_slot)(sg_shader_stage, const char*) = nullptr;
-    int (*uniformblock_slot)(sg_shader_stage, const char*) = nullptr;
-    size_t (*uniformblock_size)(sg_shader_stage, const char*) = nullptr;
+    int (*image_slot)(const char*) = nullptr;
+    int (*sampler_slot)(const char*) = nullptr;
+    int (*uniformblock_slot)(const char*) = nullptr;
+    size_t (*uniformblock_size)(const char*) = nullptr;
 };
 
 #include "sokol/shaders/mesh_color_tex1.h"

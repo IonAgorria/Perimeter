@@ -15,7 +15,13 @@
 using SokolResourceKey = uint64_t;
 static const SokolResourceKey SokolResourceKeyNone = 0;
 
-SokolResourceKey get_sokol_resource_key_buffer(size_t& len, sg_buffer_type type);
+//We need to differentiate buffer types for WebGL2 as mixed ones are not allowed
+typedef enum SokolBufferType {
+    SOKOL_BUFFERTYPE_VERTEXBUFFER = 0,
+    SOKOL_BUFFERTYPE_INDEXBUFFER,
+} SokolBufferType;
+
+SokolResourceKey get_sokol_resource_key_buffer(size_t& len, SokolBufferType type);
 SokolResourceKey get_sokol_resource_key_texture(int& w, int& h, sg_pixel_format format);
 
 size_t sokol_pixelformat_bytesize(sg_pixel_format fmt);

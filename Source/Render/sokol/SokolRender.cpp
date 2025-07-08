@@ -326,7 +326,7 @@ int cSokolRender::Init(int xScr, int yScr, int mode, SDL_Window* wnd, int Refres
     imgdesc->width = imgdesc->height = 64;
     imgdesc->pixel_format = SG_PIXELFORMAT_RGBA8;
     imgdesc->num_mipmaps = 1;
-    imgdesc->usage = SG_USAGE_IMMUTABLE;
+    imgdesc->usage.immutable = true;
     size_t pixel_len = sokol_pixelformat_bytesize(imgdesc->pixel_format);
     size_t buf_len = imgdesc->height * imgdesc->width * pixel_len;
     uint8_t* buf = new uint8_t[buf_len];

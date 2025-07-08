@@ -2,7 +2,7 @@
 
 @vs vs
 //Uniforms
-uniform mesh_normal_texture_vs_params {
+uniform layout(binding=0) mesh_normal_texture_vs_params {
     mat4 un_mvp;
     mat4 model;
     mat4 tex0_mat;
@@ -28,7 +28,7 @@ void main() {
  
 @fs fs
 //Uniforms
-uniform mesh_normal_texture_fs_params {
+uniform layout(binding=1) mesh_normal_texture_fs_params {
     vec4 diffuse;
     vec4 ambient;
     vec4 specular;
@@ -41,8 +41,8 @@ uniform mesh_normal_texture_fs_params {
     float un_alpha_test;
     int material; // 0 - NONE; 1 - MAT_LIGHT
 };
-uniform sampler un_sampler0;
-uniform texture2D un_tex0;
+uniform layout(binding=2) sampler un_sampler0;
+uniform layout(binding=3) texture2D un_tex0;
 
 //Fragment shader inputs from Vertex shader
 layout(location=0) in vec3 fs_normal;

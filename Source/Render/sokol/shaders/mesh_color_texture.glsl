@@ -2,7 +2,7 @@
 
 @vs vs
 //Uniforms
-uniform mesh_color_texture_vs_params {
+uniform layout(binding=0) mesh_color_texture_vs_params {
     mat4 un_mvp;
     mat4 tex0_mat;
     mat4 tex1_mat;
@@ -35,15 +35,15 @@ void main() {
 
 @fs fs
 //Uniforms
-uniform mesh_color_texture_fs_params {
+uniform layout(binding=1) mesh_color_texture_fs_params {
     int un_color_mode;
     float un_tex2_lerp;
     float un_alpha_test;
 };
-uniform sampler un_sampler0;
-uniform texture2D un_tex0;
+uniform layout(binding=2) sampler un_sampler0;
+uniform layout(binding=3) texture2D un_tex0;
 #if defined(SHADER_TEX_2)
-uniform texture2D un_tex1;
+uniform layout(binding=5) texture2D un_tex1;
 #endif
 
 //Fragment shader inputs from Vertex shader

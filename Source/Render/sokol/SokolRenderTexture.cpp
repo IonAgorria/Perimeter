@@ -29,7 +29,7 @@ int cSokolRender::CreateTexture(cTexture* Texture, cFileImage* FileImage, bool e
         }
         sg_image_desc* desc = new sg_image_desc();
         desc->label = nullptr; //Added later
-        desc->render_target = false;
+        desc->usage.render_attachment = false;
         desc->width = dx;
         desc->height = dy;
         desc->num_slices = 1;
@@ -56,19 +56,23 @@ int cSokolRender::CreateTexture(cTexture* Texture, cFileImage* FileImage, bool e
                 break;
             case SURFMT_RENDERMAP16:
             case SURFMT_RENDERMAP32:
-                desc->render_target = true;
+                desc->usage.render_attachment = true;
                 desc->pixel_format = SG_PIXELFORMAT_RGBA8;
                 break;
             case SURFMT_RENDERMAP_DEPTH:
-                desc->render_target = true;
+                desc->usage.render_attachment = true;
                 desc->pixel_format = SG_PIXELFORMAT_DEPTH;
                 break;
         }
 
-        if (desc->render_target || FileImage) {
-            desc->usage = SG_USAGE_IMMUTABLE;
+        if (desc->usage.render_attachment || FileImage) {
+            desc->usage.immutable = true;
+            desc->usage.dynamic_update = false;
+            desc->usage.stream_update = false;
         } else {
-            desc->usage = SG_USAGE_STREAM;
+            desc->usage.immutable = false;
+            desc->usage.dynamic_update = false;
+            desc->usage.stream_update = true;
         }
         
         if (!FileImage) {

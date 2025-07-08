@@ -206,7 +206,7 @@ private:
     }
 
     ///Assigns unused sokol buffer to buffer_ptr with requested 
-    void PrepareSokolBuffer(SokolBuffer*& buffer_ptr, MemoryResource* resource, size_t len, bool dynamic, sg_buffer_type type);
+    void PrepareSokolBuffer(SokolBuffer*& buffer_ptr, MemoryResource* resource, size_t len, bool dynamic, SokolBufferType type);
     
     ///Prepares internal sokol image
     void PrepareSokolTexture(SokolTexture2D* tex);

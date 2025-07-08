@@ -18,10 +18,10 @@ uint16_t get_chunk_amount(T& len) {
     return static_cast<uint16_t>(chunks);
 }
 
-SokolResourceKey get_sokol_resource_key_buffer(size_t& len, sg_buffer_type type) {
+SokolResourceKey get_sokol_resource_key_buffer(size_t& len, SokolBufferType type) {
     SokolResourceKey key = get_chunk_amount(len);
-    key <<= 16;
-    key |= static_cast<uint16_t>(type & 0xFFFF);
+    key <<= 8;
+    key |= static_cast<uint16_t>(type & 0xFF);
     return key;
 }
 
@@ -109,7 +109,7 @@ void SokolBuffer::update(MemoryResource* resource, size_t len) const {
 }
 
 SokolTexture2D::SokolTexture2D(sg_image_desc* _desc)
-    : MemoryResource(_desc->usage == SG_USAGE_IMMUTABLE ? 0 : _desc->width * _desc->height * sokol_pixelformat_bytesize(_desc->pixel_format))
+    : MemoryResource(_desc->usage.immutable ? 0 : _desc->width * _desc->height * sokol_pixelformat_bytesize(_desc->pixel_format))
     , desc(_desc)
 {
     pixel_format = desc->pixel_format;

@@ -204,15 +204,13 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
         }
 
 #ifdef CMDS_COMPARE_PREV_COMMAND
-        bool pipeline_diff = !prev_command || prev_command->pipeline != pipeline;
-        bool vs_params_diff = !prev_command || pipeline_diff
+        bool pipeline_diff = !prev_command || prev_command->pipeline != pipeline
         || prev_command->vs_params_len != command->vs_params_len
         || (0 != memcmp(
                 prev_command->vs_params,
                 command->vs_params,
                 command->vs_params_len
-        ));
-        bool fs_params_diff = !prev_command || pipeline_diff
+        ))
         || prev_command->fs_params_len != command->fs_params_len
         || (0 != memcmp(
                 prev_command->fs_params,
@@ -238,7 +236,7 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
 #endif
 
         if (!prev_command
-        || vs_params_diff || fs_params_diff
+        || pipeline_diff
         || prev_command->vertex_buffer != command->vertex_buffer
         || prev_command->index_buffer != command->index_buffer
         || prev_command->index_buffer != command->index_buffer
@@ -305,10 +303,10 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
     #endif
             bindings.index_buffer = command->index_buffer->res;
             if (pipeline->shader_fs_sampler_slot != -1) {
-                bindings.fs.samplers[pipeline->shader_fs_sampler_slot] = sampler;
+                bindings.samplers[pipeline->shader_fs_sampler_slot] = sampler;
             }
             if (pipeline->shader_fs_shadow_sampler_slot != -1) {
-                bindings.fs.samplers[pipeline->shader_fs_shadow_sampler_slot] = shadow_sampler;
+                bindings.samplers[pipeline->shader_fs_shadow_sampler_slot] = shadow_sampler;
             }
             
             //Bind images
@@ -325,29 +323,22 @@ void cSokolRender::ProcessRenderPass(sg_pass& render_pass, const std::vector<Sok
                     continue;
                 }
     #endif
-                bindings.fs.images[fs_slot] = image->res;
+                bindings.images[fs_slot] = image->res;
             }
             sg_apply_bindings(&bindings);
             
             //Apply VS uniforms
-#ifdef CMDS_COMPARE_PREV_COMMAND
-            if (vs_params_diff)
-#endif
             if (0 <= pipeline->vs_params_slot) {
                 xxassert(command->vs_params, "No vs parameters set in command");
                 sg_apply_uniforms(
-                        SG_SHADERSTAGE_VS,
                         pipeline->vs_params_slot,
                         sg_range { command->vs_params, command->vs_params_len }
                 );
             }
-#ifdef CMDS_COMPARE_PREV_COMMAND
-            if (fs_params_diff)
-#endif
+            
             if (0 <= pipeline->fs_params_slot) {
                 xxassert(command->fs_params, "No fs parameters set in command");
                 sg_apply_uniforms(
-                        SG_SHADERSTAGE_FS,
                         pipeline->fs_params_slot,
                         sg_range { command->fs_params, command->fs_params_len }
                 );
@@ -504,7 +495,7 @@ int cSokolRender::Fill(int r, int g, int b, int a) {
     return 0;
 }
 
-void cSokolRender::PrepareSokolBuffer(SokolBuffer*& buffer_ptr, MemoryResource* resource, size_t len, bool dynamic, sg_buffer_type type) {
+void cSokolRender::PrepareSokolBuffer(SokolBuffer*& buffer_ptr, MemoryResource* resource, size_t len, bool dynamic, SokolBufferType type) {
     MT_IS_GRAPH();
     xassert(!resource->locked);
     xassert(len <= resource->data_len);
@@ -521,13 +512,21 @@ void cSokolRender::PrepareSokolBuffer(SokolBuffer*& buffer_ptr, MemoryResource* 
         if (nh.empty()) {
             sg_buffer_desc desc = {};
             desc.size = len;
-            desc.type = type;
-            desc.usage = SG_USAGE_STREAM;
-            if (type == SG_BUFFERTYPE_VERTEXBUFFER) {
+            
+            if (type == SOKOL_BUFFERTYPE_VERTEXBUFFER) {
                 desc.label = "VertexBufferStream";
-            } else if (type == SG_BUFFERTYPE_INDEXBUFFER) {
+                desc.usage.vertex_buffer = true;
+                desc.usage.index_buffer = false;
+            } else if (type == SOKOL_BUFFERTYPE_INDEXBUFFER) {
                 desc.label = "IndexBufferStream";
+                desc.usage.vertex_buffer = false;
+                desc.usage.index_buffer = true;
             }
+            desc.usage.storage_buffer = false;
+            
+            desc.usage.immutable = false;
+            desc.usage.dynamic_update = false;
+            desc.usage.stream_update = true;
 
             sg_buffer sg_buffer = sg_make_buffer(&desc);
             buffer = new SokolResourceBuffer(
@@ -546,13 +545,22 @@ void cSokolRender::PrepareSokolBuffer(SokolBuffer*& buffer_ptr, MemoryResource* 
     } else {
         sg_buffer_desc desc = {};
         desc.size = len;
-        desc.type = type;
-        desc.usage = SG_USAGE_IMMUTABLE;
-        if (type == SG_BUFFERTYPE_VERTEXBUFFER) {
+        
+        if (type == SOKOL_BUFFERTYPE_VERTEXBUFFER) {
             desc.label = "VertexBufferImmutable";
-        } else if (type == SG_BUFFERTYPE_INDEXBUFFER) {
+            desc.usage.vertex_buffer = true;
+            desc.usage.index_buffer = false;
+        } else if (type == SOKOL_BUFFERTYPE_INDEXBUFFER) {
             desc.label = "IndexBufferImmutable";
+            desc.usage.vertex_buffer = false;
+            desc.usage.index_buffer = true;
         }
+        desc.usage.storage_buffer = false;
+
+        desc.usage.immutable = true;
+        desc.usage.dynamic_update = false;
+        desc.usage.stream_update = false;
+    
         xassert(buffer_ptr == nullptr);
         xassert(resource->data);
         desc.data = {resource->data, len};
@@ -595,7 +603,7 @@ void cSokolRender::PrepareSokolTexture(SokolTexture2D* tex) {
         if (!tex->label.empty()) {
             desc->label = tex->label.c_str();
         }
-        if (desc->usage == SG_USAGE_IMMUTABLE) {
+        if (desc->usage.immutable) {
             tex->resource_key = SokolResourceKeyNone;
         } else {
             xassert(tex->data);
@@ -621,7 +629,7 @@ void cSokolRender::PrepareSokolTexture(SokolTexture2D* tex) {
             tex->image->pooled = false;
         }
 
-        if (desc->usage == SG_USAGE_IMMUTABLE) {
+        if (desc->usage.immutable) {
             tex->image->burned = true;
             
             //We no longer need desc or data as this is immutable
@@ -766,7 +774,7 @@ void cSokolRender::CreateCommand(VertexBuffer* vb, size_t vertices, IndexBuffer*
     if (vb->data && (vb->sg == nullptr || vb->dirty)) {
         size_t len = vertices * vb->VertexSize;
         if (vb->sg == nullptr || vb->sg->buffer == nullptr || vb->dirty) {
-            PrepareSokolBuffer(vb->sg, vb, len, vb->dynamic, SG_BUFFERTYPE_VERTEXBUFFER);
+            PrepareSokolBuffer(vb->sg, vb, len, vb->dynamic, SOKOL_BUFFERTYPE_VERTEXBUFFER);
         }
         if (vb->dynamic && vb->dirty) {
             vb->sg->update(vb, len);
@@ -775,7 +783,7 @@ void cSokolRender::CreateCommand(VertexBuffer* vb, size_t vertices, IndexBuffer*
     if (ib->data && (!ib->sg || ib->dirty)) {
         size_t len = indices * sizeof(indices_t);
         if (ib->sg == nullptr || ib->sg->buffer == nullptr || ib->dirty) {
-            PrepareSokolBuffer(ib->sg, ib, len, ib->dynamic, SG_BUFFERTYPE_INDEXBUFFER);
+            PrepareSokolBuffer(ib->sg, ib, len, ib->dynamic, SOKOL_BUFFERTYPE_INDEXBUFFER);
         }
         if (ib->dynamic && ib->dirty) {
             ib->sg->update(ib, len);
