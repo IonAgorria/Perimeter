@@ -141,6 +141,10 @@ void HTManager::logic_thread()
 {
     SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 
+    std::ostringstream stream;
+    stream << "Logic Thread: 0x" << std::hex << std::this_thread::get_id() << std::
+    printf("%s - 0x%" PRIX64"\n", stream.str().c_str(), SDL_GetThreadID(nullptr));
+
     if(!start_timer){
         start_timer = true;
         syncro_timer.setTime(1);
