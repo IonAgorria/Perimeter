@@ -1590,10 +1590,6 @@ void GameShell::KeyPressed(sKey& Key)
         return;
     }
 
-    if (missionEditor_ && missionEditor_->keyPressed(Key)) {
-        return;
-    }
-
 	if(_bMenuMode){
 		if(EnableDebugKeyHandlers){
 			if(Key.fullkey == VK_F4 && reload_parameters()){
@@ -1610,6 +1606,10 @@ void GameShell::KeyPressed(sKey& Key)
  		_shellIconManager.OnKeyDown(Key.fullkey);
 		return;
 	}
+
+    if (missionEditor_ && missionEditor_->keyPressed(Key)) {
+        return;
+    }
 
 	if (isScriptReelEnabled()) {
  		_shellIconManager.OnKeyDown(Key.fullkey);
@@ -1775,14 +1775,14 @@ void GameShell::KeyUnpressed(sKey& Key)
         return;
     }
 
-	if (missionEditor_ && missionEditor_->keyUnpressed(Key)) {
-        return;
-    }
-
 	if (_bMenuMode) {
 		_shellIconManager.OnKeyUp(Key.fullkey);
 		return;
 	}
+
+    if (missionEditor_ && missionEditor_->keyUnpressed(Key)) {
+        return;
+    }
 
 	if (isScriptReelEnabled()) {
  		_shellIconManager.OnKeyDown(Key.fullkey);
@@ -1965,7 +1965,7 @@ void GameShell::MouseMove(const Vect2f& pos, const Vect2f& rel)
         return;
     }
 
-	if (missionEditor_ && missionEditor_->mouseMove(pos)) {
+	if (!_bMenuMode && missionEditor_ && missionEditor_->mouseMove(pos)) {
         return;
     }
 
@@ -2025,7 +2025,7 @@ void GameShell::MouseLeftPressed(const Vect2f& pos)
         return;
     }
 
-	if (missionEditor_ && missionEditor_->mouseLeftPressed(pos)) {
+	if (!_bMenuMode && missionEditor_ && missionEditor_->mouseLeftPressed(pos)) {
         return;
     }
 
@@ -2070,8 +2070,9 @@ void GameShell::MouseRightPressed(const Vect2f& pos)
         return;
     }
 
-	if(missionEditor_ && missionEditor_->mouseRightPressed(pos))
-		return;
+	if (!_bMenuMode && missionEditor_ && missionEditor_->mouseRightPressed(pos)) {
+	    return;
+	}
 
 	if (autoSwitchAIEnabled) {
 		setActivePlayerAIOff();
