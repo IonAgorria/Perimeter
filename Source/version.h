@@ -1,4 +1,4 @@
-#define VERSION "3.1.10"
+#define VERSION "3.1.11"
 
 //Sanity check to make sure the cmake version matches the code version
 #include <string_view>
