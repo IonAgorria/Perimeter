@@ -109,6 +109,11 @@ public:
 	float chaosCollidingFactor() const { return !flyingMode() ? chaosCollidingFactor_ : 0; } // сталкивается с хаосом 0..1
 	int clusterColliding() const { return cluster_colliding; } // сталкивается с силовым полем кластера (ID)
 	bool gravicapMode() const { return gravicap_mode; } // парит на воздушной подушке
+    
+    void setBodyObstaclePointAsymmetric(bool state) { body_obstacle_point_asymmetric = state; }
+    bool bodyObstaclePointAsymmetric() const { return body_obstacle_point_asymmetric; }
+    void setBodyObstaclePointHandling(bool state) { body_obstacle_point_handling = state; }
+    bool bodyObstaclePointHandling() const { return body_obstacle_point_handling; }
 
 	float velocityFactor() const { return velocity_factor; } // модуляция скорости
 	void setVelocityFactor(float factor) { velocity_factor = factor; }
@@ -221,6 +226,8 @@ private:
 	RigidBodyPrm::Oscillator gravicap_oscillator_roll;
 	float obstacle_turn_avr;
 	
+    bool body_obstacle_point_asymmetric;
+    bool body_obstacle_point_handling;
 	bool unmovable_;
 	bool flying_mode; // включает полет
 	bool diggingMode_;  // закопанный

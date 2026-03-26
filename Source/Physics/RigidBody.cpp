@@ -66,6 +66,8 @@ void RigidBody::build(const RigidBodyPrm& prmIn, cObjectNodeRoot* geometry_, con
 	kangaroo_mode = 0;
 	obstacle_turn_avr = 0;
 	gravicap_mode = 0;
+    body_obstacle_point_asymmetric = false;
+    body_obstacle_point_handling = false;
 	flying_mode = 0;
 	diggingMode_ = 0;
 	velocity_factor = 1;

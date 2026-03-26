@@ -27,7 +27,9 @@ terUnitBuildMaster::terUnitBuildMaster(const UnitTemplate& data) : terFrameChild
 void terUnitBuildMaster::Start()
 {
 	terFrameChild::Start();
-	BodyPoint->setFlyingMode(1);
+	BodyPoint->setFlyingMode(true);
+    BodyPoint->setBodyObstaclePointHandling(true);
+    BodyPoint->setBodyObstaclePointAsymmetric(true);
 }
 
 void terUnitBuildMaster::Quant()
