@@ -1,11 +1,11 @@
 {
+  pkgs ? import <nixpkgs> { },
   src,
-  pkgs,
   system,
   isStatic ? false,
   flag_debug ? false,
-  flag_sokol,
-  flag_d3d9
+  flag_sokol ? true,
+  flag_d3d9 ? true
 }: let 
   lib = pkgs.lib;
   platform = pkgs.stdenv.hostPlatform;
@@ -30,8 +30,13 @@
     submodules = true; 
   });
   sokol_git = builtins.fetchGit {
-    url = https://github.com/floooh/sokol;
-    rev = "7f7cd64c6d9d1d4ed08d88a3879b1d69841bf0a4";
+    url = "https://github.com/floooh/sokol";
+    rev = "4bda1469d3b311af03a34dd956460776c920dc2e";
+    ref = "master";
+  };
+  imgui_git = builtins.fetchGit {
+    url = "https://github.com/ocornut/imgui";
+    rev = "cb16568fca5297512ff6a8f3b877f461c4323fbe";
     ref = "master";
   };
   gamemath_git = builtins.fetchGit {
@@ -108,6 +113,7 @@ in pkgs.stdenv.mkDerivation {
       -DFETCHCONTENT_SOURCE_DIR_PEVENTS=${pevents_git} \
   '' + (lib.optionalString flag_sokol ''
       -DFETCHCONTENT_SOURCE_DIR_SOKOL=${sokol_git} \
+      -DFETCHCONTENT_SOURCE_DIR_IMGUI=${imgui_git} \
   '') + (lib.optionalString flag_dxvk ''
       -DOPTION_DXVK_SOURCE_DIR=$PWD/dxvk_src \
       -DCMAKE_SKIP_BUILD_RPATH=ON \
@@ -123,13 +129,13 @@ in pkgs.stdenv.mkDerivation {
     ninja
   '';
   
-  installPhase = (lib.optionalString flag_dxvk ''
-    mkdir -p $out/lib
-    cp dxvk-prefix/src/dxvk-build/src/d3d9/libdxvk_d3d9.so $out/lib;
-  '') + ''
-    strip -g -x Source/perimeter
-    mkdir -p $out/bin
-    install -m755 -D Source/perimeter $out/bin/perimeter
+  installPhase = ''
+    cmake --install . --prefix output
+    strip -g -x output/lib/*
+    strip -g -x output/bin/*
+    mkdir -p $out/bin $out/lib
+    install -m755 -D $out/bin/* $out/bin/
+    cp output/lib/* $out/lib
   '';
   
   # fixup phase
