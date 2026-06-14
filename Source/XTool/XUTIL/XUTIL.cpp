@@ -4,7 +4,11 @@
 #include <codecvt>
 #include <locale>
 #include <algorithm>
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include <cwchar>
 #include <cwctype>
 #include "tweaks.h"
@@ -507,7 +511,7 @@ arch_flags computeArchFlags() {
     arch_flags os;
 #if defined(__linux__)
     os = 1;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && defined(__MACH__)
     os = 2;
 #elif defined(_WIN32)
     os = 3;

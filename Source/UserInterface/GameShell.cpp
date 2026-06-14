@@ -46,7 +46,12 @@
 #include "files/files.h"
 #include "Localization.h"
 #include "codepages/codepages.h"
+
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 
 #ifdef GPX
 #include <c/gamepix.h>
@@ -1038,18 +1043,27 @@ void GameShell::EventHandler(SDL_Event& event) {
     if (reelManager.isVisible()) {
         if (reelAbortEnabled) {
             switch (event.type) {
+#ifdef PERIMETER_SDL3
+                case SDL_EVENT_KEY_UP: {
+#else
                 case SDL_KEYUP: {
-                    int key = sKey(event.key.keysym).fullkey;
+#endif
+                    int key = sKey(&event.key).fullkey;
                     if (key == VK_SPACE || key == VK_ESCAPE || key == VK_END) {
                         reelManager.hide();
                     }
                     break;
                 }
-                case SDL_MOUSEBUTTONUP:
+#ifdef PERIMETER_SDL3
+                case SDL_EVENT_MOUSE_BUTTON_UP: {
+#else
+                case SDL_MOUSEBUTTONUP: {
+#endif
                     if (event.button.button & (SDL_BUTTON_LMASK | SDL_BUTTON_MMASK | SDL_BUTTON_RMASK)) {
                         reelManager.hide();
                     }
                     break;
+                }
                 default:
                     break;
             }
@@ -1061,20 +1075,38 @@ void GameShell::EventHandler(SDL_Event& event) {
     }
 
     //Sets the SDL2 text input mode according to current text edit mode in UI
-    bool text_input_active = SDL_TRUE == SDL_IsTextInputActive();
-    if (_shellIconManager.isInEditMode() != text_input_active) {
+#ifdef PERIMETER_SDL3
+    if (_shellIconManager.isInEditMode() != SDL_TextInputActive(sdlWindow)) {
         if (_shellIconManager.isInEditMode()) {
-            SDL_StartTextInput();
+            SDL_StartTextInput(sdlWindow);
         } else {
-            SDL_StopTextInput();
+            SDL_StopTextInput(sdlWindow);
         }
     }
+#else
+    {
+        bool text_input_active = SDL_TRUE == SDL_IsTextInputActive();
+        if (_shellIconManager.isInEditMode() != text_input_active) {
+            if (_shellIconManager.isInEditMode()) {
+                SDL_StartTextInput();
+            } else {
+                SDL_StopTextInput();
+            }
+        }
+    }
+#endif
 
     sKey s;
     switch (event.type) {
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP: {
+            bool pressed = event.button.down;
+#else
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP: {
             bool pressed = event.button.state == SDL_PRESSED;
+#endif
             bool doubleClick = false;
             if (!pressed) {
                 float dist = xm::abs(event.button.x - lastClickPosition.x) + xm::abs(event.button.y - lastClickPosition.y);
@@ -1131,7 +1163,12 @@ void GameShell::EventHandler(SDL_Event& event) {
             }
             break;
         }
+
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_MOUSE_WHEEL: {
+#else
         case SDL_MOUSEWHEEL: {
+#endif
             bool normal = event.wheel.direction == SDL_MOUSEWHEEL_NORMAL;
             int delta = event.wheel.y * (normal ? 1 : -1);
             if (delta != 0) {
@@ -1139,7 +1176,12 @@ void GameShell::EventHandler(SDL_Event& event) {
             }
             break;
         }
+
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_MOUSE_MOTION: {
+#else
         case SDL_MOUSEMOTION: {
+#endif
             Vect2f where = convert(event.motion.x, event.motion.y);
             //printf("M %fx%f\n", where.x, where.y * 100);
             MouseMove(where, Vect2f(
@@ -1148,14 +1190,21 @@ void GameShell::EventHandler(SDL_Event& event) {
             ));
             break;
         }
+
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP: {
+            bool pressed = event.button.down;
+#else
         case SDL_KEYDOWN:
         case SDL_KEYUP: {
+            bool pressed = event.button.state == SDL_PRESSED;
+#endif
             bool editMode = _shellIconManager.isInEditMode();
-            SDL_KeyboardEvent key = event.key;
-            s = sKey(key.keysym);
+            s = sKey(&event.key);
             if (editMode && s.fullkey == ('V' | KBD_CTRL)) {
                 //Pasting keycombo, discard normal keydown/up
-                if (key.state == SDL_PRESSED && SDL_HasClipboardText()) {
+                if (pressed && SDL_HasClipboardText()) {
                     char* text = SDL_GetClipboardText();
                     if (text && *text != '\0') {
                         std::string codepaged = convertToCodepage(text, getLocale());
@@ -1167,10 +1216,10 @@ void GameShell::EventHandler(SDL_Event& event) {
                     SDL_free(text);
                 }
             } else {
-                if (key.state == SDL_PRESSED) {
+                if (pressed) {
                     KeyPressed(s);
 
-                    //We need to send certain keys when editing as SDL_TEXTINPUT don't receive them
+                    //We need to send certain keys when editing as SDL_EVENT_TEXT_INPUT don't receive them
                     if (editMode) {
                         switch (s.key) {
                             case VK_BACK:
@@ -1187,7 +1236,11 @@ void GameShell::EventHandler(SDL_Event& event) {
             }
             break;
         }
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_TEXT_INPUT: {
+#else
         case SDL_TEXTINPUT: {
+#endif
             //NOTE: _shellIconManager.isInEditMode() is implicit here as SDL2 edit mode is changed accordingly
             //printf("TI %s\n", event.text.text);
             std::string key = convertToCodepage(event.text.text, getLocale());
@@ -1196,10 +1249,20 @@ void GameShell::EventHandler(SDL_Event& event) {
             }
             break;
         }
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_TEXT_EDITING: {
+#else
         case SDL_TEXTEDITING: {
+#endif
             //printf("TE %s S %d L %d\n", event.edit.text,  event.edit.start, event.edit.length);
             break;
         }
+#ifdef PERIMETER_SDL3
+        case SDL_EVENT_WINDOW_FOCUS_GAINED: {
+            OnWindowActivate();
+            break;
+        }
+#else
         case SDL_WINDOWEVENT: {
             switch (event.window.event) {
                 case SDL_WINDOWEVENT_FOCUS_GAINED: {
@@ -1211,6 +1274,7 @@ void GameShell::EventHandler(SDL_Event& event) {
             }
             break;
         }
+#endif
         default: {
             break;
         }
@@ -1307,7 +1371,7 @@ bool GameShell::DebugKeyPressed(sKey& Key)
 				debug_write_mode ^= DEBUG_SHOW_WATCH;
 		if(!debug_write_mode){
 //			hide_debug_window();
-            SDL_ShowCursor(SDL_FALSE);
+            SystemCursorVisible(false);
 			}
 		break;
 	case VK_F3:
@@ -1325,7 +1389,7 @@ bool GameShell::DebugKeyPressed(sKey& Key)
 	case VK_RETURN | KBD_CTRL: 
 	case VK_RETURN | KBD_CTRL | KBD_SHIFT: {
 		terRenderDevice->Flush(true);
-        SDL_ShowCursor(SDL_TRUE);
+        SystemCursorVisible(true);
 		//setUseAlternativeNames(true);
 #ifndef _FINAL_VERSION_
         //TODO Port TriggerChain to ingame dev UI instead of using win32 stuff
@@ -1344,7 +1408,7 @@ bool GameShell::DebugKeyPressed(sKey& Key)
 #endif
 
 		terCamera->setFocus(HardwareCameraFocus);
-        SDL_ShowCursor(SDL_FALSE);
+        SystemCursorVisible(false);
 		RestoreFocus();									
 		break;
 	}
@@ -1367,9 +1431,9 @@ bool GameShell::DebugKeyPressed(sKey& Key)
 			break;
 		}
 #endif
-        SDL_ShowCursor(SDL_TRUE);
+        SystemCursorVisible(true);
 		profiler_start_stop();
-        SDL_ShowCursor(SDL_FALSE);
+        SystemCursorVisible(false);
 		RestoreFocus();
 		break;
 
@@ -1737,7 +1801,11 @@ void GameShell::ControlPressed(uint32_t key)
                 cameraMouseTrack = true;
                 mousePressControl_ = mousePosition();
                 _shellCursorManager.HideCursor();
+#ifdef PERIMETER_SDL3
+                SDL_SetWindowRelativeMouseMode(sdlWindow, true);
+#else
                 SDL_SetRelativeMouseMode(SDL_TRUE);
+#endif
             }
 			break;
 
@@ -1940,8 +2008,12 @@ bool GameShell::hasCaptureInputCallback() {
 void GameShell::cancelMouseLook() {
 	if(cameraMouseTrack)
 	{
-		cameraMouseTrack = false;
-        SDL_SetRelativeMouseMode(SDL_FALSE);
+	    cameraMouseTrack = false;
+#ifdef PERIMETER_SDL3
+	    SDL_SetWindowRelativeMouseMode(sdlWindow, false);
+#else
+	    SDL_SetRelativeMouseMode(SDL_FALSE);
+#endif
 		setCursorPosition(mousePressControl_);
         mousePosition_ = mousePressControl_;
 
@@ -2949,7 +3021,7 @@ void GameShell::createChaos() {
 void GameShell::editParameters()
 {
 	terRenderDevice->Flush(true);
-    SDL_ShowCursor(SDL_TRUE);
+    SystemCursorVisible(true);
 
 	bool reloadParameters = false;
 	savePrm().manualData.zeroLayerHeight = vMap.hZeroPlast;
@@ -3037,7 +3109,7 @@ void GameShell::editParameters()
 	}
 
 	terCamera->setFocus(HardwareCameraFocus);
-    SDL_ShowCursor(SDL_FALSE);
+    SystemCursorVisible(false);
 	RestoreFocus();
 }
 

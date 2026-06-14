@@ -7,7 +7,11 @@
 #ifdef SOKOL_METAL
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
+#ifdef PERIMETER_SDL3
+#import <SDL3/SDL_syswm.h>
+#else
 #import <SDL_syswm.h>
+#endif
 
 //TODO This should be stored in a metal_context struct like in d3d11 impl
 static id<MTLDevice> mtl_device;

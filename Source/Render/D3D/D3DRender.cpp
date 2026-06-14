@@ -1,7 +1,11 @@
 #ifndef _WIN32
 //For SDL_WINDOW_VULKAN constant
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_video.h>
+#else
 #include <SDL_video.h>
-#endif
+#endif // PERIMETER_SDL3
+#endif // _WIN32
 #include "StdAfxRD.h"
 #include "D3DRender.h"
 #include "Font.h"
@@ -311,7 +315,7 @@ int cD3DRender::Init(int xscr,int yscr,int Mode, SDL_Window* wnd, int RefreshRat
      * Bump mapping and Self shadow are disabled by not loading shaders
      * Bump chaos is disabled manually elsewhere
      */
-#ifndef __APPLE__
+#if !(defined(__APPLE__) && defined(__MACH__))
 	if(DeviceCaps.PixelShaderVersion>= D3DPS_VERSION(2,0) && lpD3D->CheckDeviceFormat(Adapter,D3DDEVTYPE_HAL,d3ddm.Format,0,D3DRTYPE_TEXTURE,D3DFMT_D16)==0)
 		dtAdvanceOriginal=new DrawTypeGeforceFX;
 	else
@@ -515,6 +519,7 @@ void cD3DRender::UpdateRenderMode()
 }
 
 void cD3DRender::WorkaroundWindowSize() {
+    //TODO is this still necessary under SDL3?
     //Workaround for some distros (Ubuntu?) setting window bigger than originally requested
     //Since Steam Linux Runtime is based on ubuntu it affects there too
     if (sdl_window && (RenderMode & RENDERDEVICE_MODE_WINDOW)) {
@@ -525,7 +530,11 @@ void cD3DRender::WorkaroundWindowSize() {
             //Set correct size
             SDL_SetWindowSize(sdl_window, ScreenSize.x, ScreenSize.y);
             //Put on center again
+#ifdef PERIMETER_SDL3
+            int screen = SDL_GetDisplayForWindow(sdl_window);
+#else
             int screen = SDL_GetWindowDisplayIndex(sdl_window);
+#endif
             int windowPos = SDL_WINDOWPOS_CENTERED_DISPLAY(screen);
             SDL_SetWindowPosition(sdlWindow, windowPos, windowPos);
         }

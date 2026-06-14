@@ -1,5 +1,9 @@
 #include <thread>
+#ifdef PERIMETER_SDL3
+#include <SDL3_mixer/SDL_mixer.h>
+#else
 #include <SDL_mixer.h>
+#endif
 #include "StdAfx.h"
 #include "SystemUtil.h"
 #include "files/files.h"

@@ -147,10 +147,18 @@ extern const int PNC_DESYNC_RESTORE_MODE_FULL;
 
 class CAutoLock
 {
+#ifdef PERIMETER_SDL3
+    SDL_Mutex* m_pCs;
+#else
     SDL_mutex* m_pCs;
+#endif
 
 public:
+#ifdef PERIMETER_SDL3
+    CAutoLock(SDL_Mutex* pCs) : m_pCs(pCs) {
+#else
     CAutoLock(SDL_mutex* pCs) : m_pCs(pCs) {
+#endif
         SDL_LockMutex(m_pCs);
     }
     ~CAutoLock() {
@@ -423,7 +431,11 @@ public:
 	//void StartGame();
 	void LLogicQuant();
 
+#ifdef PERIMETER_SDL3
+    SDL_Mutex* m_GeneralLock;
+#else
     SDL_mutex* m_GeneralLock;
+#endif
 
 	//Game(first) Thread
 	InOutNetComBuffer  in_ClientBuf;

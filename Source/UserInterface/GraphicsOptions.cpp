@@ -192,7 +192,11 @@ void GraphOptions::apply() {
                             || terScreenIndex != resolution.display;
     } else {
         //If window then check if user moved it to another display first
+#ifdef PERIMETER_SDL3
+        int windowScreenIndex = SDL_GetDisplayForWindow(sdlWindow);
+#else
         int windowScreenIndex = SDL_GetWindowDisplayIndex(sdlWindow);
+#endif
         if (0 <= windowScreenIndex && terScreenIndex != windowScreenIndex) {
             terScreenIndex = windowScreenIndex;
         }
@@ -218,11 +222,7 @@ void GraphOptions::apply() {
     if ((terGrabInput != 0) != grabInput) {
         terGrabInput = grabInput;
         check_command_line_parameter("GrabInput", terGrabInput);
-        if (terGrabInput) {
-            SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
-        } else {
-            SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
-        }
+        SystemSetWindowGrab(sdlWindow, terGrabInput);
     }
 #endif
     shell_anchor = static_cast<SHELL_ANCHOR>(uiAnchor);

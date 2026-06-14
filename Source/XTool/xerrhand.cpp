@@ -5,7 +5,11 @@
 #include <sstream>
 #include <vector>
 #include <thread>
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include "files/files.h"
 #include "tweaks.h"
 #include "xstream.h"

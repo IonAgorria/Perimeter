@@ -2,7 +2,15 @@
 #define __UMATH_H__
 
 #include "xmath.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_endian.h>
+#define CONVERT_COLOR_TO_ARGB(c) (SDL_Swap32LE(c))
+#define CONVERT_COLOR_TO_ABGR(c) ((SDL_Swap32BE(c) & 0xFFFFFF00)  >> 8 | (SDL_Swap32LE(c) & 0xFF000000))
+#else
 #include <SDL_endian.h>
+#define CONVERT_COLOR_TO_ARGB(c) (SDL_SwapLE32(c))
+#define CONVERT_COLOR_TO_ABGR(c) ((SDL_SwapBE32(c) & 0xFFFFFF00)  >> 8 | (SDL_SwapLE32(c) & 0xFF000000))
+#endif
 
 #define ABS(a)										((a) >= 0 ? (a) :-(a))
 
@@ -44,9 +52,6 @@ struct sColor4f
 	inline bool operator != (const sColor4f &color) const { return !(*this == color); }
 };
 
-#define CONVERT_COLOR_TO_ARGB(c) (SDL_SwapLE32(c))
-#define CONVERT_COLOR_TO_ABGR(c) ((SDL_SwapBE32(c) & 0xFFFFFF00)  >> 8 | (SDL_SwapLE32(c) & 0xFF000000))
-
 struct sColor4c
 {
     union {
@@ -74,7 +79,11 @@ struct sColor4c
 	inline sColor4c operator / (int f) const 		{ if(f!=0) f=(1<<16)/f; else f=1<<16; return sColor4c((r*f)>>16,(g*f)>>16,(b*f)>>16,(a*f)>>16); }
 	unsigned char& operator[](int i)				{ return ((unsigned char*)this)[i];}
     inline uint32_t ARGB() const                    { return CONVERT_COLOR_TO_ARGB(v); }
+#ifdef PERIMETER_SDL3
+    inline void ARGB(uint32_t argb)                 { v = SDL_Swap32LE(argb); }
+#else
     inline void ARGB(uint32_t argb)                 { v = SDL_SwapLE32(argb); }
+#endif
     inline uint32_t ABGR() const                    { return CONVERT_COLOR_TO_ABGR(v); }
 
 	inline void interpolate(const sColor4c &u,const sColor4c &v,float f) { r=xm::round(u.r+(v.r-u.r)*f); g=xm::round(u.g+(v.g-u.g)*f); b=xm::round(u.b+(v.b-u.b)*f); a=xm::round(u.a+(v.a-u.a)*f); }

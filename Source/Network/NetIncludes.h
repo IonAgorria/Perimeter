@@ -7,8 +7,12 @@
 #include <algorithm>
 #include <cinttypes>
 #include <climits>
-#include <SDL_net.h>
 #include <unordered_map>
+#ifdef PERIMETER_SDL3
+#include <SDL3_net/SDL_net.h>
+#else
+#include <SDL_net.h>
+#endif
 
 #include "tweaks.h"
 #include "xutil.h"

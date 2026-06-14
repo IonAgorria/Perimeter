@@ -4,7 +4,11 @@
 GameShell в графическом потоке.
 */
 #include "fps.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_thread.h>
+#else
 #include <SDL_thread.h>
+#endif
 
 class HTManager
 {
@@ -57,7 +61,11 @@ protected:
 	time_type time;
 	time_type dtime;
 
-	SDL_threadID logic_thread_id;
+#ifdef PERIMETER_SDL3
+	SDL_ThreadID logic_thread_id;
+#else
+    SDL_threadID logic_thread_id;
+#endif
 	void logic_thread();
 
     friend int logic_thread_init(void*);

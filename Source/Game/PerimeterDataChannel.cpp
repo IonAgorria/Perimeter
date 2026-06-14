@@ -113,7 +113,11 @@ void PerimeterDataChannelSave()
     if (!terFullScreen) {
         //We want window size to be stored in case of windowed mode
         if (sdlWindow) {
+#ifdef PERIMETER_SDL3
+            int windowScreenIndex = SDL_GetDisplayForWindow(sdlWindow);
+#else
             int windowScreenIndex = SDL_GetWindowDisplayIndex(sdlWindow);
+#endif
             if (0 <= windowScreenIndex) {
                 terScreenIndex = windowScreenIndex;
             }

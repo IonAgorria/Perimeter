@@ -1,15 +1,17 @@
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
+#include <SDL.h>
+#endif
+
 #include "NetIncludes.h"
+#include <set>
 
 #include "Runtime.h"
 #include "P2P_interface.h"
 #include "NetConnectionAux.h"
-
 #include "Universe.h"
 #include "GameContent.h"
-
-#include <algorithm>
-#include <set>
-#include <SDL.h>
 #include "files/files.h"
 #include "NetRelay.h"
 #include "codepages/codepages.h"

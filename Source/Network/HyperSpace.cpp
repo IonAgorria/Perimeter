@@ -1,7 +1,11 @@
 #include "NetIncludes.h"
 
 #include <unordered_set>
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 
 #include "SystemUtil.h"
 #include "Runtime.h"

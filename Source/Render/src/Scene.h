@@ -108,7 +108,12 @@ public:
 	}
 	*/
 
+#ifdef PERIMETER_SDL3
+    SDL_Mutex* GetLockDraw(){return lock_draw;}
+#else
     SDL_mutex* GetLockDraw(){return lock_draw;}
+#endif
+
 private:
 	void Animate();
 	cObjLibrary			*ObjLibrary;				// библиотека 3d-объектов

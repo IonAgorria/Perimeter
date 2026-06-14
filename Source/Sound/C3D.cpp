@@ -291,7 +291,6 @@ SNDOneBuffer::SNDOneBuffer()
 {
 	script=NULL;
 	buffer=NULL;
-	nSamplesPerSec=0;
 	p3DBuffer=NULL;
 	pSound=NULL;
 	used=false;

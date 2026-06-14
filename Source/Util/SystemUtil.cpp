@@ -1,6 +1,10 @@
 #include <cinttypes>
 #include "StdAfx.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include "Config.h"
 #include "UnitAttribute.h"
 #include "GameContent.h"
@@ -246,12 +250,27 @@ int16_t GetVKFromScanCode(SDL_Scancode scancode) {
         case SDL_SCANCODE_RALT:              return VK_RALT;
         case SDL_SCANCODE_RGUI:
         case SDL_SCANCODE_MODE:
+#ifdef PERIMETER_SDL3
+        case SDL_SCANCODE_MEDIA_NEXT_TRACK:
+        case SDL_SCANCODE_MEDIA_PREVIOUS_TRACK:
+        case SDL_SCANCODE_MEDIA_STOP:
+        case SDL_SCANCODE_MEDIA_PLAY:
+        case SDL_SCANCODE_MUTE:
+        case SDL_SCANCODE_MEDIA_SELECT:
+        case SDL_SCANCODE_MEDIA_EJECT:
+        case SDL_SCANCODE_MEDIA_REWIND:
+        case SDL_SCANCODE_MEDIA_FAST_FORWARD:
+#else
         case SDL_SCANCODE_AUDIONEXT:
         case SDL_SCANCODE_AUDIOPREV:
         case SDL_SCANCODE_AUDIOSTOP:
         case SDL_SCANCODE_AUDIOPLAY:
         case SDL_SCANCODE_AUDIOMUTE:
         case SDL_SCANCODE_MEDIASELECT:
+        case SDL_SCANCODE_EJECT:
+        case SDL_SCANCODE_AUDIOREWIND:
+        case SDL_SCANCODE_AUDIOFASTFORWARD:
+#endif
         case SDL_SCANCODE_WWW:
         case SDL_SCANCODE_MAIL:
         case SDL_SCANCODE_CALCULATOR:
@@ -269,12 +288,8 @@ int16_t GetVKFromScanCode(SDL_Scancode scancode) {
         case SDL_SCANCODE_KBDILLUMTOGGLE:
         case SDL_SCANCODE_KBDILLUMDOWN:
         case SDL_SCANCODE_KBDILLUMUP:
-        case SDL_SCANCODE_EJECT:
-        case SDL_SCANCODE_SLEEP:
         case SDL_SCANCODE_APP1:
-        case SDL_SCANCODE_APP2:
-        case SDL_SCANCODE_AUDIOREWIND:
-        case SDL_SCANCODE_AUDIOFASTFORWARD:  return 0;
+        case SDL_SCANCODE_APP2:  return 0;
     }
     return -1;
 }
@@ -300,7 +315,11 @@ void initKeyboardMapping() {
                 break;
         }
     }
+#ifdef PERIMETER_SDL3
+    for (int i = 0; i < SDL_SCANCODE_COUNT; ++i) {
+#else
     for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+#endif
         SDL_Scancode scancode = static_cast<SDL_Scancode>(i);
         int16_t vk = GetVKFromScanCode(scancode);
         if (vk <= VK_NONE) continue;
@@ -368,23 +387,59 @@ bool isPressed(uint32_t key) {
         case VK_XBUTTON2:
             return SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_X2MASK;
         case VK_SHIFT:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_SHIFT;
+#else
             return SDL_GetModState() & KMOD_SHIFT;
+#endif
         case VK_LSHIFT:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_LSHIFT;
+#else
             return SDL_GetModState() & KMOD_LSHIFT;
+#endif
         case VK_RSHIFT:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_RSHIFT;
+#else
             return SDL_GetModState() & KMOD_RSHIFT;
+#endif
         case VK_CONTROL:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_CTRL;
+#else
             return SDL_GetModState() & KMOD_CTRL;
+#endif
         case VK_LCONTROL:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_LCTRL;
+#else
             return SDL_GetModState() & KMOD_LCTRL;
+#endif
         case VK_RCONTROL:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_RCTRL;
+#else
             return SDL_GetModState() & KMOD_RCTRL;
+#endif
         case VK_ALT:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_ALT;
+#else
             return SDL_GetModState() & KMOD_ALT;
+#endif
         case VK_LALT:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_LALT;
+#else
             return SDL_GetModState() & KMOD_LALT;
+#endif
         case VK_RALT:
+#ifdef PERIMETER_SDL3
+            return SDL_GetModState() & SDL_KMOD_RALT;
+#else
             return SDL_GetModState() & KMOD_RALT;
+#endif
         default:
             break;
     }
@@ -418,13 +473,20 @@ bool isPressed(uint32_t key) {
     return false;
 }
 
-sKey::sKey(SDL_Keysym keysym) {
-    int16_t vk = GetVKFromScanCode(keysym.scancode);
+sKey::sKey(SDL_KeyboardEvent* keyevent) {
+#ifdef PERIMETER_SDL3
+    SDL_Scancode scancode = keyevent->scancode;
+    SDL_Keymod mod = keyevent->mod;
+#else
+    SDL_Scancode scancode = keyevent->keysym.scancode;
+    uint16_t mod = keyevent->keysym.mod;
+#endif
+    int16_t vk = GetVKFromScanCode(scancode);
     if (vk <= 0) {
         key = 0;
 #ifdef PERIMETER_DEBUG
         if (vk < 0) {
-            fprintf(stderr, "%s: Unknown SDL key requested scan %d sym %d\n", __func__, keysym.scancode, keysym.sym);
+            fprintf(stderr, "%s: Unknown SDL key requested scan %d\n", __func__, scancode);
         }
 #endif
     } else {
@@ -438,16 +500,27 @@ sKey::sKey(SDL_Keysym keysym) {
     shift = 0;
     alt = 0;
 
-    auto mod = keysym.mod;
+#ifdef PERIMETER_SDL3
+    if ((mod & SDL_KMOD_SHIFT) != 0) {
+#else
     if ((mod & KMOD_SHIFT) != 0) {
+#endif
         fullkey |= KBD_SHIFT;
         shift |= 1;
     }
+#ifdef PERIMETER_SDL3
+    if ((mod & SDL_KMOD_CTRL) != 0) {
+#else
     if ((mod & KMOD_CTRL) != 0) {
+#endif
         fullkey |= KBD_CTRL;
         ctrl |= 1;
     }
+#ifdef PERIMETER_SDL3
+    if ((mod & SDL_KMOD_ALT) != 0) {
+#else
     if ((mod & KMOD_ALT) != 0) {
+#endif
         fullkey |= KBD_ALT;
         alt |= 1;
     }
@@ -935,4 +1008,27 @@ std::string formatTimeWithoutHour(int timeMilis) {
 		res += std::string(str);
 	}
 	return res;
+}
+
+// --- Windowing/System ------
+
+void SystemCursorVisible(bool visible) {
+#ifdef PERIMETER_SDL3
+    if (visible) {
+        SDL_ShowCursor();
+    } else {
+        SDL_HideCursor();
+    }
+#else
+    SDL_ShowCursor(visible ? SDL_TRUE : SDL_FALSE);
+#endif
+}
+
+void SystemSetWindowGrab(SDL_Window* window, bool grab) {
+#ifdef PERIMETER_SDL3
+    SDL_SetWindowKeyboardGrab(window, grab);
+    SDL_SetWindowMouseGrab(window, grab);
+#else
+    SDL_SetWindowGrab(window, grab ? SDL_TRUE : SDL_FALSE);
+#endif
 }

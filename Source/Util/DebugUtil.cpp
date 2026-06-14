@@ -248,7 +248,7 @@ void show_watch()
 	FOR_EACH(watch_map, i)
 		text < i -> first.c_str() < ": " < i -> second.c_str() < '\n';
 	text < '\0';
-    SDL_ShowCursor(SDL_TRUE);
+    SystemCursorVisible(true);
 //	show_debug_window(text.str(), debug_window_sx, debug_window_sy);
 	RestoreFocus();
 }

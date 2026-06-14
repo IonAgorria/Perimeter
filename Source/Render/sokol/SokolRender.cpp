@@ -12,10 +12,19 @@
 #include "DrawBuffer.h"
 #include "SokolShaders.h"
 #include "RenderTracker.h"
+
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_hints.h>
+#else
 #include <SDL_hints.h>
+#endif
 
 #ifdef PERIMETER_SOKOL_GL
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_opengl.h>
+#else
 #include <SDL_opengl.h>
+#endif
 #endif
 
 #ifdef SOKOL_D3D11
@@ -429,7 +438,11 @@ int cSokolRender::Done() {
 #ifdef PERIMETER_SOKOL_GL
     if (sdl_gl_context != nullptr) {
         RenderSubmitEvent(RenderEvent::DONE, "Sokol GL shutdown");
+#ifdef PERIMETER_SDL3
+        SDL_GL_DestroyContext(sdl_gl_context);
+#else
         SDL_GL_DeleteContext(sdl_gl_context);
+#endif
         sdl_gl_context = nullptr;
     }
 #endif

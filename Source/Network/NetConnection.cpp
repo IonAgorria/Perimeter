@@ -501,10 +501,16 @@ int32_t NetConnection::send(const XBuffer* data, NETID source, NETID destination
     header |= (static_cast<uint64_t>(flags & 0xFFFF) << 8);
     header |= (static_cast<uint64_t>(body_len & 0xFFFFFFFF) << 24);
     XBuffer xbuf(msg_size);
-    //NOTE: Use write<> with explicit type to avoid type ambiguity from SDL_SwapBE64 in some archs
+    //NOTE: Use write<> with explicit type to avoid type ambiguity from SDL_Swap64BE in some archs
+#ifdef PERIMETER_SDL3
+    xbuf.write<uint64_t>(SDL_Swap64BE(header));
+    xbuf.write<uint64_t>(SDL_Swap64BE(source));
+    xbuf.write<uint64_t>(SDL_Swap64BE(destination));
+#else
     xbuf.write<uint64_t>(SDL_SwapBE64(header));
     xbuf.write<uint64_t>(SDL_SwapBE64(source));
     xbuf.write<uint64_t>(SDL_SwapBE64(destination));
+#endif
     xbuf.write(sending_buffer, sending_buffer.tell());
 
 #ifdef PERIMETER_DEBUG
@@ -546,7 +552,11 @@ int32_t NetConnection::receive(NetConnectionMessage** packet_ptr, int32_t timeou
         fprintf(stderr, "NetConnection::receive NETID 0x%" PRIX64 " header failed amount %d %s\n", netid, amount, SDLNet_GetError());
         return -2;
     }
+#ifdef PERIMETER_SDL3
+    header = SDL_Swap64BE(header);
+#else
     header = SDL_SwapBE64(header);
+#endif
     
     //Check magic
     if ((header & NC_HEADER_MASK) != NC_HEADER_MAGIC) {
@@ -598,8 +608,13 @@ int32_t NetConnection::receive(NetConnectionMessage** packet_ptr, int32_t timeou
     } else {
         *packet > packet->source;
         *packet > packet->destination;
+#ifdef PERIMETER_SDL3
+        packet->source = SDL_Swap64BE(packet->source);
+        packet->destination = SDL_Swap64BE(packet->destination);
+#else
         packet->source = SDL_SwapBE64(packet->source);
         packet->destination = SDL_SwapBE64(packet->destination);
+#endif
     }
 
     //Decompression

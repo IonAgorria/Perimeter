@@ -9,12 +9,21 @@
 #include "files/files.h"
 
 //Audio formats
+#ifdef PERIMETER_SDL3
+#define AUDIO_FORMAT_8 SDL_AUDIO_S8
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+#define AUDIO_FORMAT_16 SDL_AUDIO_S16LE
+#else
+#define AUDIO_FORMAT_16 SDL_AUDIO_S16BE
+#endif
+#else //PERIMETER_SDL3
 #define AUDIO_FORMAT_8 AUDIO_S8
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
 #define AUDIO_FORMAT_16 AUDIO_S16LSB
 #else
 #define AUDIO_FORMAT_16 AUDIO_S16MSB
 #endif
+#endif //PERIMETER_SDL3
 
 static bool g_enable_sound = false;
 static bool g_enable_voices = true;
@@ -172,12 +181,21 @@ bool SNDInitSound(int mixChannels, int chunkSizeFactor)
         const char* format_str;
         switch(deviceFormat) {
             default: format_str="Unknown"; break;
+#ifdef PERIMETER_SDL3
+            case SDL_AUDIO_U8: format_str="U8"; break;
+            case SDL_AUDIO_S8: format_str="S8"; break;
+            case AUDIO_U16LSB: format_str="U16LSB"; break;
+            case SDL_AUDIO_S16LE: format_str="S16LSB"; break;
+            case AUDIO_U16MSB: format_str="U16MSB"; break;
+            case SDL_AUDIO_S16BE: format_str="S16MSB"; break;
+#else //PERIMETER_SDL3
             case AUDIO_U8: format_str="U8"; break;
             case AUDIO_S8: format_str="S8"; break;
             case AUDIO_U16LSB: format_str="U16LSB"; break;
             case AUDIO_S16LSB: format_str="S16LSB"; break;
             case AUDIO_U16MSB: format_str="U16MSB"; break;
             case AUDIO_S16MSB: format_str="S16MSB"; break;
+#endif //PERIMETER_SDL3
         }
         printf("Audio opened=%d times frequency=%dHz format=%s channels=%d\n", numtimesopened, deviceFrequency, format_str, deviceChannels);
     }

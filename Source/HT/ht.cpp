@@ -8,7 +8,11 @@
 #include <cstdlib>
 #include <sstream>
 #include <thread>
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_thread.h>
+#else
 #include <SDL_thread.h>
+#endif
 
 #include "./mt_config.h"
 
@@ -20,7 +24,11 @@
 #include <c/gamepix.h>
 #endif
 
+#ifdef PERIMETER_SDL3
+const SDL_ThreadID bad_thread_id=-1;
+#else
 const SDL_threadID bad_thread_id=-1;
+#endif
 
 namespace MTConfig {
 #ifdef EMSCRIPTEN
@@ -122,7 +130,11 @@ void HTManager::GameClose()
         if (MTConfig::multithreading() && logic_thread_id != bad_thread_id) {
             end_logic = SDL_CreateSemaphore(0);
 
+#ifdef PERIMETER_SDL3
+            uint32_t ret = SDL_WaitSemaphore(end_logic);
+#else
             uint32_t ret = SDL_SemWait(end_logic);
+#endif
             xassert(ret == 0);
 
             SDL_DestroySemaphore(end_logic);
@@ -140,7 +152,11 @@ void HTManager::GameClose()
 
 void HTManager::logic_thread()
 {
+#ifdef PERIMETER_SDL3
+    SDL_SetCurrentThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+#else
     SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+#endif
 
     std::ostringstream stream;
     stream << "Logic Thread: 0x" << std::hex << std::this_thread::get_id() << std::
@@ -199,7 +215,11 @@ void HTManager::logic_thread()
 			Sleep(10);
 	}
 
-	SDL_SemPost(end_logic);
+#ifdef PERIMETER_SDL3
+	SDL_SignalSemaphore(end_logic);
+#else
+    SDL_SemPost(end_logic);
+#endif
 }
 
 bool HTManager::Quant()

@@ -1,4 +1,8 @@
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include "StdAfx.h"
 #include "UnitAttribute.h"
 #include "GameContent.h"
@@ -454,7 +458,7 @@ void findGameContent() {
         SDL_free((void*) basePath_ptr);
     }
 
-#if !defined(__APPLE__) && !defined(_WIN32)
+#if !(defined(__APPLE__) && defined(__MACH__)) && !defined(_WIN32)
     //Current working directory absolute path
     //Mac apps get exception when trying to scan it's own dir so don't do it
     //On Windows we use relative current directory instead of absolute (see above)

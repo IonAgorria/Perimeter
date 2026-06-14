@@ -5,7 +5,11 @@
 #define PERIMETER_SOKOL_GL (1)
 #endif
 
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_video.h>
+#else
 #include <SDL_video.h>
+#endif
 
 #include "SokolTypes.h"
 

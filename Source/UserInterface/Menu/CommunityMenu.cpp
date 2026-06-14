@@ -2,7 +2,11 @@
 #include "GameShell.h"
 #include "PerimeterShellUI.h"
 #include "MessageBox.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include "MainMenu.h"
 
 std::string openWebURL;

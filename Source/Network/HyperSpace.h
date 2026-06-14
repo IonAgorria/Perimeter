@@ -210,7 +210,11 @@ public:
 
 	bool flag_HostMigrate;
 
+#ifdef PERIMETER_SDL3
+    SDL_Mutex* m_FullListGameCommandLock;
+#else
     SDL_mutex* m_FullListGameCommandLock;
+#endif
 
 };
 

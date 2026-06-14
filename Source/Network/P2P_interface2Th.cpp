@@ -1,3 +1,9 @@
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
+#include <SDL.h>
+#endif
+
 #include "NetIncludes.h"
 
 #include "Runtime.h"
@@ -9,7 +15,6 @@
 
 #include <algorithm>
 #include <set>
-#include <SDL.h>
 #include "files/files.h"
 #include "../HT/mt_config.h"
 
