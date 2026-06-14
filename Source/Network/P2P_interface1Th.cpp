@@ -1,10 +1,12 @@
-#include "NetIncludes.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
+#include <SDL.h>
+#endif
 
+#include "NetIncludes.h"
 #include "P2P_interface.h"
 #include "ServerList.h"
-
-#include <SDL.h>
-
 #include "GameShell.h"
 #include "Universe.h"
 #include "files/files.h"

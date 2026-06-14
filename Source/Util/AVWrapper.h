@@ -3,7 +3,11 @@
 
 #include <list>
 #include <string>
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_audio.h>
+#else
 #include <SDL_audio.h>
+#endif
 
 // FFMPEG include
 #ifdef __cplusplus

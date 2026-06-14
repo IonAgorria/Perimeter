@@ -741,6 +741,31 @@ double AVWrapper::getDuration() const {
 
 SDL_AudioFormat AVWrapper::toSDLAudioFormat(AVSampleFormat fmt) {
     switch (fmt) {
+#ifdef PERIMETER_SDL3
+        case AV_SAMPLE_FMT_U8:
+            return SDL_AUDIO_U8;
+        case AV_SAMPLE_FMT_S16:
+            return SDL_AUDIO_S16LE;
+        case AV_SAMPLE_FMT_S32:
+            return SDL_AUDIO_S32LE;
+        case AV_SAMPLE_FMT_FLT:
+            return SDL_AUDIO_F32LE;
+        case AV_SAMPLE_FMT_U8P:
+            return SDL_AUDIO_U8;
+        case AV_SAMPLE_FMT_S16P:
+            return SDL_AUDIO_S16LE;
+        case AV_SAMPLE_FMT_S32P:
+            return SDL_AUDIO_S32LE;
+        case AV_SAMPLE_FMT_FLTP:
+            return SDL_AUDIO_F32LE;
+        default:
+        case AV_SAMPLE_FMT_DBL:
+        case AV_SAMPLE_FMT_DBLP:
+        case AV_SAMPLE_FMT_S64:
+        case AV_SAMPLE_FMT_S64P:
+        case AV_SAMPLE_FMT_NONE:
+            return SDL_AUDIO_UNKNOWN;
+#else
         case AV_SAMPLE_FMT_U8:
             return AUDIO_U8;
         case AV_SAMPLE_FMT_S16:
@@ -764,22 +789,39 @@ SDL_AudioFormat AVWrapper::toSDLAudioFormat(AVSampleFormat fmt) {
         case AV_SAMPLE_FMT_S64P:
         case AV_SAMPLE_FMT_NONE:
             return 0;
+#endif
     }
 }
 
 AVSampleFormat AVWrapper::fromSDLAudioFormat(SDL_AudioFormat fmt, bool planar) {
     AVSampleFormat result = AV_SAMPLE_FMT_NONE;
     switch (fmt) {
+#ifdef PERIMETER_SDL3
+        case SDL_AUDIO_U8:
+#else
         case AUDIO_U8:
+#endif
             result = planar ? AV_SAMPLE_FMT_U8P : AV_SAMPLE_FMT_U8;
             break;
+#ifdef PERIMETER_SDL3
+        case SDL_AUDIO_S16LE:
+#else
         case AUDIO_S16:
+#endif
             result = planar ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16;
             break;
+#ifdef PERIMETER_SDL3
+        case SDL_AUDIO_S32LE:
+#else
         case AUDIO_S32:
+#endif
             result = planar ? AV_SAMPLE_FMT_S32P : AV_SAMPLE_FMT_S32;
             break;
+#ifdef PERIMETER_SDL3
+        case SDL_AUDIO_F32LE:
+#else
         case AUDIO_F32:
+#endif
             result = planar ? AV_SAMPLE_FMT_FLTP : AV_SAMPLE_FMT_FLT;
             break;
         default:

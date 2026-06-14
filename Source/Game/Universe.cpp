@@ -1264,7 +1264,7 @@ void terUniverse::WriteDebugInfo()
 	PlayerVect::iterator pi;
 	FOR_EACH(Players, pi)
 		(*pi)->WriteDebugInfo(DebugWriteBuffer);
-    SDL_ShowCursor(SDL_TRUE);
+    SystemCursorVisible(true);
 //	show_debug_window(DebugWriteBuffer, 400, 400);
 	RestoreFocus();
 }

@@ -671,7 +671,7 @@ void cVisGeneric::SetShadowMapSelf4x4(bool b4x4)
 bool cVisGeneric::PossibilityBumpChaos()
 {
 #ifdef PERIMETER_D3D9
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(__MACH__)
     return false;
 #else
 	return gb_RenderDevice3D && (gb_RenderDevice3D->DeviceCaps.TextureOpCaps|D3DTEXOPCAPS_BUMPENVMAP);

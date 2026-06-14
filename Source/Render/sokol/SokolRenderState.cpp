@@ -2,7 +2,11 @@
 #include <array>
 #include <string>
 #include <vector>
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_mouse.h>
+#else
 #include <SDL_mouse.h>
+#endif
 #include "xmath.h"
 #include "Umath.h"
 #include "StdAfxRD.h"

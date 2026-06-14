@@ -1,5 +1,9 @@
 #ifdef PERIMETER_DEBUG
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 #include <set>
 #include "StdAfxXPrm.h"
 #include "RunTimeCompiler.h"

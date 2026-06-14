@@ -6,7 +6,11 @@
 #include <windows.h>
 #ifdef _WIN32
 //Needed for extracting HWND from SDL_Window, in Linux it gives conflict due to XErrorHandler
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_syswm.h>
+#else
 #include <SDL_syswm.h>
+#endif
 //For hWndVisGeneric
 #include "SystemUtil.h"
 #endif

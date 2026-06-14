@@ -10,7 +10,11 @@
 #include "LogicUpdater.h"
 #include "ReelManager.h"
 #include "CameraManager.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_events.h>
+#else
 #include <SDL_events.h>
+#endif
 
 struct LocalizedText;
 class MissionEditor;

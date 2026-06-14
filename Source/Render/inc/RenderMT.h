@@ -1,6 +1,12 @@
 #pragma once
 
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#define MTMUTEX SDL_Mutex
+#else
 #include <SDL_mutex.h>
+#define MTMUTEX SDL_mutex
+#endif
 
 enum
 {
@@ -16,7 +22,7 @@ bool MT_IS_LOGIC();
 #define MTG() xassert(MT_IS_GRAPH())
 #define MTL() xassert(MT_IS_LOGIC())
 
-#define MTDECLARE(x) SDL_mutex* x
+#define MTDECLARE(x) MTMUTEX* x
 #define MTINIT(x) x = SDL_CreateMutex()
 #define MTDONE(x) SDL_DestroyMutex(x)
 #define MTENTER(x) SDL_LockMutex(x)
@@ -27,7 +33,7 @@ void debug_dump_mt_tls();
 struct MTEnter
 {
     MTDECLARE(pcs);
-	MTEnter(SDL_mutex* pcs_)
+	MTEnter(MTMUTEX* pcs_)
 	{
 		pcs=pcs_;
 		MTENTER(pcs);

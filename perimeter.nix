@@ -83,10 +83,10 @@ in pkgs.stdenv.mkDerivation {
     libbacktrace
     boost
     ffmpeg
-    SDL2
-    SDL2_mixer
-    SDL2_image
-    SDL2_net
+    sdl3
+    sdl3-mixer
+    sdl3-image
+    sdl3-net
   ]
   ++ lib.optionals (flag_sokol && !platform.isWindows) [ libglvnd ]
   ++ lib.optionals (platform.isLinux) [ alsa-lib ]

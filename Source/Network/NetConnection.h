@@ -16,7 +16,11 @@ const int32_t CONNECTION_RELAY_TIMEOUT = 60000;
 ///How many milliseconds to wait for active connection
 const int32_t CONNECTION_ACTIVE_TIMEOUT = 60000;
 
+#ifdef PERIMETER_SDL3
+#include <SDL3_net/SDL_net.h>
+#else
 #include <SDL_net.h>
+#endif
 
 //Used to identify player connection
 typedef uint64_t NETID;

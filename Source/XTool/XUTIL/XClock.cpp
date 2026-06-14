@@ -5,7 +5,11 @@
 
 #include "xutl.h"
 #include "xerrhand.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#else
 #include <SDL.h>
+#endif
 
 uint64_t perf_freq=0;
 uint64_t freq_ms=0;

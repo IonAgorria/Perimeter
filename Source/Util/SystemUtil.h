@@ -22,7 +22,11 @@ bool create_directories(const std::string& path, std::error_code* error = nullpt
 //		Key Press
 /////////////////////////////////////////////////////////////////////////////////
 #include "xkey.h"
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL_events.h>
+#else
 #include <SDL_events.h>
+#endif
 
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL (WM_MOUSELAST + 1)
@@ -30,6 +34,8 @@ bool create_directories(const std::string& path, std::error_code* error = nullpt
 
 bool applicationHasFocus();
 bool applicationIsGo();
+void SystemCursorVisible(bool visible);
+void SystemSetWindowGrab(SDL_Window* window, bool grab);
 
 void initKeyboardMapping();
 SDL_Scancode getSDLScanCodeFromVK(uint32_t key);
@@ -56,7 +62,7 @@ struct sKey {
         uint32_t fullkey;
     };
 
-    explicit sKey(SDL_Keysym keysym);
+    explicit sKey(SDL_KeyboardEvent* keyevent);
 
     explicit sKey(uint32_t key_, bool set_mods_pressed);
 

@@ -31,10 +31,17 @@
 #include "Localization.h"
 #include "codepages/codepages.h"
 
+#ifdef PERIMETER_SDL3
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_hints.h>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3/SDL_vulkan.h>
+#else
 #include <SDL.h>
 #include <SDL_hints.h>
 #include <SDL_image.h>
 #include <SDL_vulkan.h>
+#endif
 #include <sstream>
 #include <thread>
 
@@ -297,7 +304,7 @@ void handle_application_restart() {
 void InternalErrorHandler()
 {
     if (sdlWindow && terGrabInput) {
-        SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
+        SystemSetWindowGrab(sdlWindow, false);
     }
 #ifndef _FINAL_VERSION_
     RestoreGDI(); //TODO is this necessary anymore?
@@ -480,7 +487,7 @@ void PerimeterSetupDisplayMode() {
 #if PERIMETER_DEBUG
     printf("PerimeterSetupDisplayMode\n");
 #endif
-    SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
+    SystemSetWindowGrab(sdlWindow, false);
     bool windowFullscreen = SDL_GetWindowFlags(sdlWindow)&WINDOW_FULLSCREEN_FLAG;
     
     //Create display mode with current settings
@@ -492,9 +499,13 @@ void PerimeterSetupDisplayMode() {
     mode.driverdata = nullptr;
 
     //Get display mode if no display was set previously
+#ifdef PERIMETER_SDL3
+    int windowScreenIndex = SDL_GetDisplayForWindow(sdlWindow);
+#else
     int windowScreenIndex = SDL_GetWindowDisplayIndex(sdlWindow);
+#endif
     if (windowScreenIndex < 0) {
-        SDL_PRINT_ERROR("SDL_GetWindowDisplayIndex");
+        SDL_PRINT_ERROR("SDL_GetDisplayForWindow");
     }
     if (terScreenIndex < 0) {
         terScreenIndex = windowScreenIndex;
@@ -529,14 +540,22 @@ void PerimeterSetupDisplayMode() {
     if (0 <= terScreenIndex) {
         if (terFullScreen) {
             SDL_DisplayMode closest;
+#ifdef PERIMETER_SDL3
+            if (SDL_GetClosestFullscreenDisplayMode(terScreenIndex, &mode, &closest) == nullptr) {
+#else
             if (SDL_GetClosestDisplayMode(terScreenIndex, &mode, &closest) == nullptr) {
-                SDL_PRINT_ERROR("SDL_GetClosestDisplayMode");
+#endif
+                SDL_PRINT_ERROR("SDL_GetClosestFullscreenDisplayMode");
             } else {
+#ifdef PERIMETER_SDL3
+                if (SDL_SetWindowFullscreenMode(sdlWindow, &closest)) {
+#else
                 if (SDL_SetWindowDisplayMode(sdlWindow, &closest)) {
-                    SDL_PRINT_ERROR("SDL_SetWindowDisplayMode");
+#endif
+                    SDL_PRINT_ERROR("SDL_SetWindowFullscreenMode");
                 } else {
 #if PERIMETER_DEBUG
-                    printf("SDL_SetWindowDisplayMode\n");
+                    printf("SDL_SetWindowFullscreenMode\n");
 #endif
                     //Get refresh rate
                     if (SDL_GetCurrentDisplayMode(terScreenIndex, &mode) != 0) {
@@ -563,7 +582,7 @@ void PerimeterSetupDisplayMode() {
             
             //Grab window
             if (terGrabInput) {
-                SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
+                SystemSetWindowGrab(sdlWindow, true);
             }
         }
     }
@@ -633,12 +652,21 @@ void PerimeterCreateWindow(uint32_t window_flags) {
     if (!icon_path.empty()) {
         if (std::filesystem::exists(std::filesystem::u8path(icon_path))) {
             SDL_Surface* icon = IMG_Load(icon_path.c_str());
+#ifdef PERIMETER_SDL3
+            if (icon) {
+                SDL_SetWindowIcon(sdlWindow, icon);
+                SDL_DestroySurface(icon);
+            } else {
+                fprintf(stderr, "Window icon IMG_Load error: %s\n", SDL_GetError());
+            }
+#else
             if (icon) {
                 SDL_SetWindowIcon(sdlWindow, icon);
                 SDL_FreeSurface(icon);
             } else {
                 fprintf(stderr, "Window icon IMG_Load error: %s\n", IMG_GetError());
             }
+#endif
         } else {
             printf("Window icon not found in resource/icons/icon.png or in %s\n", icon_path.c_str());
         }
@@ -652,7 +680,7 @@ void PerimeterCreateWindow(uint32_t window_flags) {
     
     //Grab input
     if (terGrabInput) {
-        SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
+        SystemSetWindowGrab(sdlWindow, true);
     }
 }
 
@@ -827,7 +855,7 @@ void HTManager::finitGraphics()
 	terLogicGeneric = NULL;
     
     if (sdlWindow) {
-        SDL_ShowCursor(SDL_TRUE);
+        SystemCursorVisible(true);
         SDL_DestroyWindow(sdlWindow);
         sdlWindow = nullptr;
 #ifdef _WIN32
@@ -1377,55 +1405,77 @@ void app_event_poll() {
 
         //Handle event by type and subtype
         switch (event.type) {
+#ifdef PERIMETER_SDL3
+            case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+                if (terGrabInput && applicationHasFocus_ && sdlWindow
+                    && (!SDL_GetWindowMouseGrab(sdlWindow) || !SDL_GetWindowKeyboardGrab(sdlWindow))) {
+#else
             case SDL_MOUSEBUTTONDOWN: {
-                //Grab window at click if window is resizable and is not already grabbed
                 if (terGrabInput && applicationHasFocus_ && sdlWindow && SDL_GetWindowGrab(sdlWindow) == SDL_FALSE) {
-                    SDL_SetWindowGrab(sdlWindow, SDL_TRUE);
+#endif
+                    //Grab window at click if window is resizable and is not already grabbed
+                    SystemSetWindowGrab(sdlWindow, true);
                 }
                 break;
             }
             case SDL_WINDOWEVENT: {
                 switch (event.window.event) {
+#ifdef PERIMETER_SDL3
+                    case SDL_EVENT_WINDOW_RESIZED:
+                    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+#else
                     case SDL_WINDOWEVENT_RESIZED:
                     case SDL_WINDOWEVENT_SIZE_CHANGED: {
-                        if (0 <= lastWindowResize) {
-#if 1
-                            lastWindowResize = 10;
-#else
-                            if (_bMenuMode) {
-                                lastWindowResize = 10;
-                            } else {
-                                //Game can be unstable during frequent resizing
-                                lastWindowResize = 20;
-                            }
 #endif
+                        if (0 <= lastWindowResize) {
+                            lastWindowResize = 10;
                         }
                         break;
                     }
+#ifdef PERIMETER_SDL3
+                    case SDL_EVENT_WINDOW_FOCUS_LOST: {
+#else
                     case SDL_WINDOWEVENT_FOCUS_LOST: {
+#endif
                         if (terGrabInput && sdlWindow) {
-                            SDL_SetWindowGrab(sdlWindow, SDL_FALSE);
+                            SystemSetWindowGrab(sdlWindow, false);
                         }
                         if (!applicationRunBackground) {
                             applicationHasFocus_ = false;
                         }
                         break;
                     }
+#ifdef PERIMETER_SDL3
+                    case SDL_EVENT_WINDOW_FOCUS_GAINED: {
+#else
                     case SDL_WINDOWEVENT_FOCUS_GAINED: {
+#endif
                         applicationHasFocus_ = true;
                         break;
                     }
+#ifdef PERIMETER_SDL3
+                    case SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
+#else
                     case SDL_WINDOWEVENT_CLOSE: {
+#endif
                         //NOTE: Seems that MacOS uses this event instead of SDL_QUIT when window is requested to close
                         closing = true;
                         break;
                     }
                     case SDL_WINDOWEVENT_TAKE_FOCUS:
+#ifdef PERIMETER_SDL3
+                    case SDL_EVENT_WINDOW_MOUSE_ENTER:
+                    case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+                    case SDL_EVENT_WINDOW_EXPOSED:
+                    case SDL_EVENT_WINDOW_SHOWN:
+                    case SDL_EVENT_WINDOW_HIDDEN: {
+#else
                     case SDL_WINDOWEVENT_ENTER:
                     case SDL_WINDOWEVENT_LEAVE:
                     case SDL_WINDOWEVENT_EXPOSED:
                     case SDL_WINDOWEVENT_SHOWN:
                     case SDL_WINDOWEVENT_HIDDEN: {
+#endif
                         break;
                     }
                     default:
@@ -1433,13 +1483,11 @@ void app_event_poll() {
                 }
                 break;
             }
-            case SDL_KEYUP:
-            case SDL_KEYDOWN:
-            case SDL_MOUSEBUTTONUP:
-            case SDL_MOUSEMOTION: {
-                break;
-            }
+#ifdef PERIMETER_SDL3
+            case SDL_EVENT_QUIT: {
+#else
             case SDL_QUIT: {
+#endif
                 closing = true;
                 break;
             }
@@ -1453,7 +1501,7 @@ void app_event_poll() {
                 onGameTerminationRequest();
             } else {
                 //No gameshell available, manually close stuff
-                SDL_ShowCursor(SDL_TRUE);
+                SystemCursorVisible(true);
                 SDL_DestroyWindow(sdlWindow);
                 sdlWindow = nullptr;
 #ifdef _WIN32

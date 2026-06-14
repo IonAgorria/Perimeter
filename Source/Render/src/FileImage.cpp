@@ -2,7 +2,11 @@
 #include <stdio.h>
 #include <cstdint>
 #include <memory>
+#ifdef PERIMETER_SDL3
+#include <SDL3_image/SDL_image.h>
+#else
 #include <SDL_image.h>
+#endif
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -562,7 +566,7 @@ public:
 ///FileImage wrapper that uses SDL_image for image loading 
 ///////////////////////////////////////////////
 
-#if SDL_IMAGE_VERSION_ATLEAST(2, 0, 7)
+#if defined(PERIMETER_SDL3) || SDL_IMAGE_VERSION_ATLEAST(2, 0, 7)
 //On version 2.0.7 and onwards should support 24 bits ICO/CUR images
 #define SDL_IMAGE_ICOCUR_24
 #endif
@@ -573,7 +577,7 @@ class cSDLImage : public cFileImage
 public:
     //Method copied from SDL_image to support 24 bits CUR
     static SDL_Surface* LoadICOCUR_RW_Custom(SDL_RWops * src, int type, int freesrc) {
-        SDL_bool was_error;
+        bool was_error;
         long fp_offset;
         int bmpPitch;
         int i, pad;
@@ -598,9 +602,9 @@ public:
 
         /* Make sure we are passed a valid data source */
         surface = NULL;
-        was_error = SDL_FALSE;
+        was_error = false;
         if (src == NULL) {
-            was_error = SDL_TRUE;
+            was_error = true;
             goto done;
         }
 
@@ -613,7 +617,7 @@ public:
         bfCount = SDL_ReadLE16(src);
         if ((bfReserved != 0) || (bfType != type) || (bfCount == 0)) {
             IMG_SetError("File is not a Windows %s file", type == 1 ? "ICO" : "CUR");
-            was_error = SDL_TRUE;
+            was_error = true;
             goto done;
         }
 
@@ -647,7 +651,7 @@ public:
         /* Advance to the DIB Data */
         if (SDL_RWseek(src, icoOfs, RW_SEEK_SET) < 0) {
             SDL_Error(SDL_EFSEEK);
-            was_error = SDL_TRUE;
+            was_error = true;
             goto done;
         }
 
@@ -666,13 +670,13 @@ public:
             SDL_ReadLE32(src);
         } else {
             IMG_SetError("Unsupported ICO bitmap format");
-            was_error = SDL_TRUE;
+            was_error = true;
             goto done;
         }
 
         /* Check for read error */
         if (SDL_strcmp(SDL_GetError(), "") != 0) {
-            was_error = SDL_TRUE;
+            was_error = true;
             goto done;
         }
 
@@ -697,13 +701,13 @@ public:
                         break;
                     default:
                         IMG_SetError("ICO file with unsupported bit count");
-                        was_error = SDL_TRUE;
+                        was_error = true;
                         goto done;
                 }
                 break;
             default:
                 IMG_SetError("Compressed ICO files not supported");
-                was_error = SDL_TRUE;
+                was_error = true;
                 goto done;
         }
 
@@ -714,7 +718,7 @@ public:
                 SDL_CreateRGBSurface(0, biWidth, biHeight, 32, 0x00FF0000,
                                      0x0000FF00, 0x000000FF, 0xFF000000);
         if (surface == NULL) {
-            was_error = SDL_TRUE;
+            was_error = true;
             goto done;
         }
 
@@ -766,7 +770,7 @@ public:
                         if (i % (8 / ExpandBMP) == 0) {
                             if (!SDL_RWread(src, &pixel, 1, 1)) {
                                 IMG_SetError("Error reading from ICO");
-                                was_error = SDL_TRUE;
+                                was_error = true;
                                 goto done;
                             }
                         }
@@ -785,7 +789,7 @@ public:
                             //Load each color channel into pixel
                             if (!SDL_RWread(src, &channel, 1, 1)) {
                                 IMG_SetError("Error reading from ICO");
-                                was_error = SDL_TRUE;
+                                was_error = true;
                                 goto done;
                             }
                             pixel |= (channel << (j * 8));
@@ -800,7 +804,7 @@ public:
                     if (SDL_RWread(src, bits, 1, surface->pitch)
                         != surface->pitch) {
                         SDL_Error(SDL_EFREAD);
-                        was_error = SDL_TRUE;
+                        was_error = true;
                         goto done;
                     }
                     break;
@@ -827,7 +831,7 @@ public:
                 if (i % (8 / ExpandBMP) == 0) {
                     if (!SDL_RWread(src, &pixel, 1, 1)) {
                         IMG_SetError("Error reading from ICO");
-                        was_error = SDL_TRUE;
+                        was_error = true;
                         goto done;
                     }
                 }
@@ -857,7 +861,7 @@ public:
         }
         return (surface);
     }
-#endif
+#endif //SDL_IMAGE_ICOCUR_24
     
 protected:
     SDL_Surface* image;
@@ -872,7 +876,11 @@ public:
 
     int close() override {
         if (image) {
+#ifdef PERIMETER_SDL3
+            SDL_DestroySurface(image);
+#else
             SDL_FreeSurface(image);
+#endif
             image = nullptr;
         }
         return 0;
@@ -884,7 +892,11 @@ public:
         if (file_path.empty()) {
             return 1;
         }
+#ifdef PERIMETER_SDL3
+        SDL_IOStream* src = SDL_IOFromFile(file_path.c_str(), "rb");
+#else
         SDL_RWops* src = SDL_RWFromFile(file_path.c_str(), "rb");
+#endif
         int ret = loadRW(src);
         if (ret) {
             fprintf(stderr, "Error loading image file: %s\n", file_path.c_str());
@@ -893,9 +905,18 @@ public:
     }
     
     ///Loads from provided RWops
+#ifdef PERIMETER_SDL3
+    int loadRW(SDL_IOStream* src) {
+#else
     int loadRW(SDL_RWops* src) {
+#endif
 #ifdef SDL_IMAGE_ICOCUR_24
-        image = IMG_Load_RW(src, 1);
+        image = IMG_Load_IO(src, 1);
+        if(!image) {
+            fprintf(stderr, "IMG_Load_IO: %s\n", SDL_GetError());
+            return 1;
+        }
+        bpp = SDL_BITSPERPIXEL(image->format);
 #else
         bool isICO = IMG_isICO(src);
         if (isICO || IMG_isCUR(src)) {
@@ -903,18 +924,17 @@ public:
         } else {
             image = IMG_Load_RW(src, 1);
         }
-#endif
         if(!image) {
             fprintf(stderr, "IMG_Load_RW: %s\n", IMG_GetError());
             return 1;
         }
-
-        //All cursors are 32x32
+        bpp = image->format->BitsPerPixel;
+#endif
         x = image->h;
         y = image->w;
         time = 0;
         length = 1;
-        bpp = image->format->BitsPerPixel;
+
         
         return 0;
     }
@@ -998,7 +1018,11 @@ public:
         //Create image from data in mem and add to frames
         frames.clear();
         for (auto& frame : ani.frames) {
+#ifdef PERIMETER_SDL3
+            SDL_IOStream* ops = SDL_IOFromConstMem(frame.data, static_cast<int>(frame.data_len));
+#else
             SDL_RWops* ops = SDL_RWFromConstMem(frame.data, static_cast<int>(frame.data_len));
+#endif
             cSDLImage* frame_image = new cSDLImage();
             err = frame_image->loadRW(ops);
             if (err) {
@@ -1082,11 +1106,15 @@ cFileImage* cFileImage::Create(const std::string& fname)
 }
 
 void cFileImage::InitFileImage() {
+#ifndef PERIMETER_SDL3
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
+#endif
 }
 
 void cFileImage::DoneFileImage() {
+#ifndef PERIMETER_SDL3
     IMG_Quit();
+#endif
 }
 
 void GetFileName(const char *FullName,char *fname)
