@@ -2,7 +2,17 @@
 #include "SoundInternal.h"
 #include "Sample.h"
 #include "../Render/inc/RenderMT.h"
-#include <unordered_map>
+
+//Called when channel is finished
+#ifdef PERIMETER_SDL3
+static void callbackTrackStopped(void *userdata, MIX_Track *track) {
+    SND_Sample* sample = reinterpret_cast<SND_Sample*>(userdata);
+    printf("Channel %p finished playing %p.\n", track);
+    if (sample->track == track) {
+        sample->track = nullptr;
+    }
+}
+#else // PERIMETER_SDL3
 
 ///Used for tracking what channel is playing what sample, if sample is not here then is not being played
 std::vector<SND_Sample*> channelSamples;
@@ -10,52 +20,78 @@ std::vector<SND_Sample*> channelSamples;
 ///Avoid channelSamples being accessed by callback while iterating/modifying
 MTSection channelSamplesLock;
 
-// make a channelDone function
 static void callbackChannelFinished(int channel)
 {
     //printf("Channel %d finished playing.\n", channel);
     MTAuto mtenter(&channelSamplesLock);
-    channelSamples[channel] = nullptr;
+    if (channel < channelSamples.size()) {
+        channelSamples[channel] = nullptr;
+    }
 }
+#endif // PERIMETER_SDL3
 
 void SNDSetupChannelCallback(int mixChannels, bool init) {
+#ifndef PERIMETER_SDL3
     Mix_ChannelFinished(init ? callbackChannelFinished : nullptr);
     if (init) {
         channelSamples.resize(mixChannels, nullptr);
     } else {
         channelSamples.clear();
     }
+#endif
 }
 
 MixChunkWrapper::~MixChunkWrapper() {
     if (chunk) {
+#ifdef PERIMETER_SDL3
+        MIX_DestroyAudio(chunk);
+#else
         //Only free with Mix if sound is inited, check Mix_Init just in case
         if (SND::has_sound_init || (Mix_Init(0) != 0)) {
             Mix_FreeChunk(chunk);
         } else {
             SDL_free(chunk);
         }
+#endif
         chunk = nullptr;
     }
 }
 
 SND_Sample::SND_Sample(const std::shared_ptr<MixChunkWrapper>& chunk)  {
     this->chunk = chunk;
-    this->chunk_source = chunk;
-    Mix_Chunk* current = getChunk();
+    this->millis = 0;
+    SND_Chunk* current = getChunk();
+#ifdef PERIMETER_SDL3
     if (current) {
-        this->chunk_millis = SNDcomputeAudioLengthMS(current->alen);
-    } else {
-        this->chunk_millis = 0;
+        this->millis = MIX_AudioFramesToMS(current, MIX_GetAudioDuration(current));
     }
+#else
+    this->chunk_source = chunk;
+    if (current) {
+        this->millis = SNDcomputeAudioLengthMS(current->alen);
+    }
+#endif
 }
 
 SND_Sample::~SND_Sample() {
+#ifdef PERIMETER_SDL3
+    if (track) {
+        MIX_StopTrack(track);
+        track = nullptr;
+    }
+#endif
+
     chunk_source = nullptr;
     chunk = nullptr;
 }
 
 bool SND_Sample::loadRawData(uint8_t* src_data, size_t src_len, bool copy, const std::string& file_name) {
+#ifdef PERIMETER_SDL3
+    SDL_AudioSpec spec = { SND::deviceFormat, SND::deviceChannels, SND::deviceFrequency };
+    SND_Chunk* new_chunk = MIX_LoadRawAudio(SND::deviceMixer, src_data, src_len, &spec);
+    chunk = std::make_shared<MixChunkWrapper>(new_chunk, file_name);
+    this->millis = MIX_AudioFramesToMS(new_chunk, MIX_GetAudioDuration(new_chunk));
+#else
     Mix_Chunk* new_chunk = (Mix_Chunk*) SDL_malloc(sizeof(Mix_Chunk));
     new_chunk->allocated = 1;
     if (copy) {
@@ -71,13 +107,14 @@ bool SND_Sample::loadRawData(uint8_t* src_data, size_t src_len, bool copy, const
         new_chunk->volume = 128;
     }
     chunk_source = chunk = std::make_shared<MixChunkWrapper>(new_chunk, file_name);
-    this->chunk_millis = SNDcomputeAudioLengthMS(src_len);
+    this->millis = SNDcomputeAudioLengthMS(src_len);
     this->chunk_frequency = this->frequency;
+#endif
     return true;
 }
 
-int SND_Sample::play() {
-    int channel = getChannel();
+SND_Channel SND_Sample::play() {
+    SND_Channel channel = getChannel();
     //Don't play if already playing
     if (channel != SND_NO_CHANNEL) {
         return SND_NO_CHANNEL;
@@ -87,11 +124,11 @@ int SND_Sample::play() {
     //fprintf(stderr, "Playing: %d\n", Mix_Playing(-1));
     
     //Find a available channel
-    if (channel_group == SND_NO_CHANNEL) {
+    if (channel_group == SND_NO_CHANNEL_GROUP) {
         fprintf(stderr, "SND_Sample channel_group not set!\n");
         channel_group = SND_GROUP_EFFECTS;
     }
-    channel = Mix_GroupAvailable(channel_group);
+    channel = SNDGetGroupAvailableChannel(channel_group, false);
     if (channel == SND_NO_CHANNEL && channel_group == SND_GROUP_EFFECTS) {
         //Avoid playing if volume is too low since we are starved already
         if (this->volume < SND::EFFECT_VOLUME_THRESHOLD) {
@@ -99,14 +136,18 @@ int SND_Sample::play() {
         }
         
         //Use the specific groups
-        channel = Mix_GroupAvailable(this->looped ? SND_GROUP_EFFECTS_LOOPED : SND_GROUP_EFFECTS_ONCE);
+        channel = SNDGetGroupAvailableChannel(this->looped ? SND_GROUP_EFFECTS_LOOPED : SND_GROUP_EFFECTS_ONCE, false);
     }
     
     //Steal if necessary
     if (channel == SND_NO_CHANNEL && steal_channel) {
-        channel = Mix_GroupOldest(this->channel_group);
+        channel = SNDGetGroupAvailableChannel(this->channel_group, true);
         if (channel != SND_NO_CHANNEL) {
+#ifdef PERIMETER_SDL3
+            MIX_StopTrack(channel, 0);
+#else
             Mix_HaltChannel(channel);
+#endif
         }
     }
     
@@ -114,41 +155,55 @@ int SND_Sample::play() {
     if (channel != SND_NO_CHANNEL) {
         //Setup frequency
         this->frequency = std::max(0.0f, std::min(50.0f, this->frequency));
+#ifndef PERIMETER_SDL3
         if (needFrequencyChange()) {
             this->convertChunkFrequency();
         }
+#endif
         
         //Setup channel that is going to play this sound
         this->updateEffects(channel);
 
         //Play audio sample
-        Mix_Chunk* chunk_play = getChunk();
+        SND_Chunk* chunk_play = getChunk();
+#ifndef PERIMETER_SDL3
         chunk_play->volume = getChunkSource()->volume;
-        bool loop = this->external_looped_restart ? false : this->looped; //Set loop flag if not externally controlled 
+#endif
+        bool loop = this->external_looped_restart ? false : this->looped; //Set loop flag if not externally controlled
+#ifdef PERIMETER_SDL3
+        MIX_SetTrackStoppedCallback(channel, callbackTrackStopped, this);
+        MIX_SetTrackAudio(channel, chunk_play);
+        MIX_PlayTrack(channel, SND::props_track_looped);
+#else
         channel = Mix_PlayChannel(channel, chunk_play, loop ? -1 : 0);
         if (channel == -1) { //Return's -1 if fails to play
             fprintf(stderr, "Mix_PlayChannel error (%s): %s\n",  chunk->fileName.c_str(), Mix_GetError());
             channel = SND_NO_CHANNEL;
-        } else {
-            //Store channel for callback
-            xassert(channel < channelSamples.size());
-            MTAuto mtenter(&channelSamplesLock);
-            xassert(channelSamples[channel] == nullptr);
-            channelSamples[channel] = this;
         }
-        
-    }
-#if 0
-    if (channel == SND_NO_CHANNEL) {
-        fprintf(stderr, "SND_Sample channel not found\n");
-    }
+
+        if (channel != SND_NO_CHANNEL) {
+            //Store channel for callback
+            MTAuto mtenter(&channelSamplesLock);
+            int channelIndex = SNDGetChannelIndex(channel);
+            xassert(channelIndex < channelSamples.size());
+            xassert(channelSamples[channelIndex] == nullptr);
+            channelSamples[channelIndex] = this;
+        }
 #endif
+    }
 
     return channel;
 }
 
-bool SND_Sample::updateEffects(int channel) {
+bool SND_Sample::updateEffects(SND_Channel channel) {
     bool updated = false;
+#ifdef PERIMETER_SDL3
+    if (getChunk() != MIX_GetTrackAudio(channel)) {
+        //This means the track changed audio but we weren't notified properly
+        track = nullptr;
+        return false;
+    }
+#endif
     if (channel != SND_NO_CHANNEL) {
         //Setup volume
         this->volume = std::max(0.0f, std::min(1.0f, this->volume));
@@ -167,12 +222,20 @@ bool SND_Sample::updateEffects(int channel) {
                 global_vol = SND::sound_volume;
                 break;
         }
-        Mix_Volume(channel, static_cast<int>(128.0f * this->volume * global_vol));
 
         //Setup panning
         this->pan = std::max(0.0f, std::min(1.0f, this->pan));
+#ifdef PERIMETER_SDL3
+        MIX_SetTrackFrequencyRatio(channel, this->frequency);
+        MIX_SetTrackGain(channel, this->volume * global_vol);
+        MIX_StereoGains stereo = { 1.0f - this->pan, this->pan};
+        MIX_SetTrackStereo(channel, &stereo);
+#else
+        Mix_Volume(channel, static_cast<int>(128.0f * this->volume * global_vol));
+
         int right = static_cast<int>(255 * this->pan);
         Mix_SetPanning(channel, 255 - right, right);
+#endif
         
         updated = true;
     }
@@ -180,8 +243,9 @@ bool SND_Sample::updateEffects(int channel) {
 }
 
 bool SND_Sample::updateEffects() {
-    int channel = getChannel();
+    SND_Channel channel = getChannel();
 
+#ifndef PERIMETER_SDL3
     //Check if frequency changed 
     if (channel != SND_NO_CHANNEL && needFrequencyChange()) {
         //Okay this sound is not gonna stop so we need to stop first to update frequency at play
@@ -193,68 +257,92 @@ bool SND_Sample::updateEffects() {
             }
         }
     }
+#endif
 
     return updateEffects(channel);
 }
 
-int SND_Sample::getChannel() const {
+SND_Channel SND_Sample::getChannel() const {
     if (!SND::has_sound_init) return SND_NO_CHANNEL;
+#ifdef PERIMETER_SDL3
+    return track;
+#else
     MTAuto mtenter(&channelSamplesLock);
-    int channel = SND_NO_CHANNEL;
+    SND_Channel channel = SND_NO_CHANNEL;
     for (int i = 0; i < channelSamples.size(); ++i) {
         if (channelSamples[i] == this) {
-            channel = i;
+            channel = SNDGetChannelFromIndex(i);
             break;
         }
     }
     return channel;
+#endif
 }
 
 bool SND_Sample::isPlaying() const {
-    int channel = getChannel();
+    SND_Channel channel = getChannel();
     return channel != SND_NO_CHANNEL;
 }
 
 bool SND_Sample::isPaused() const {
-    int channel = getChannel();
-    return channel != SND_NO_CHANNEL && Mix_Paused(channel);
+    SND_Channel channel = getChannel();
+    if (channel == SND_NO_CHANNEL) {
+        return false;
+    }
+#ifdef PERIMETER_SDL3
+    return MIX_TrackPaused(channel);
+#else
+    return Mix_Paused(channel);
+#endif
 }
 
 bool SND_Sample::pause() const {
-    int channel = getChannel();
-    if (channel != SND_NO_CHANNEL) {
-        Mix_Pause(channel);
-        return true;
+    SND_Channel channel = getChannel();
+    if (channel == SND_NO_CHANNEL) {
+        return false;
     }
-    return false;
+#ifdef PERIMETER_SDL3
+    return MIX_PauseTrack(channel);
+#else
+    return Mix_Pause(channel);
+#endif
 }
 
 bool SND_Sample::resume() const {
-    int channel = getChannel();
-    if (channel != SND_NO_CHANNEL) {
-        Mix_Resume(channel);
-        return true;
+    SND_Channel channel = getChannel();
+    if (channel == SND_NO_CHANNEL) {
+        return false;
     }
-    return false;
+#ifdef PERIMETER_SDL3
+    return MIX_ResumeTrack(channel);
+#else
+    return Mix_Resume(channel);
+#endif
 }
 
 bool SND_Sample::stop() const {
-    int channel = getChannel();
-    if (channel != SND_NO_CHANNEL) {
-        Mix_HaltChannel(channel);
-        return true;
+    SND_Channel channel = getChannel();
+    if (channel == SND_NO_CHANNEL) {
+        return false;
     }
-    return false;
+#ifdef PERIMETER_SDL3
+    return MIX_StopTrack(channel, 0);
+#else
+    return Mix_HaltChannel(channel);
+#endif
 }
 
+#ifndef PERIMETER_SDL3
 bool SND_Sample::needFrequencyChange() const {
     return std::abs(this->frequency - this->chunk_frequency) > 0.10;
 }
 
 bool SND_Sample::convertChunkFrequency() {
     int new_frequency = static_cast<int>(static_cast<float>(SND::deviceFrequency) * this->frequency);
+    if (SND::deviceFrequency == new_frequency) {
+        return false;
+    }
 
-    //Build the audio converter to convert device format (chunks are loaded with this format already) into desired format
     SDL_AudioCVT cvt;
     int res = SDL_BuildAudioCVT(
             &cvt,
@@ -267,6 +355,9 @@ bool SND_Sample::convertChunkFrequency() {
         SDL_PRINT_ERROR("SND_Sample SDL_BuildAudioCVT");
     } else if (cvt.needed) {
         Mix_Chunk* source = getChunkSource();
+        if (!source) {
+            return false;
+        }
 
         //We need to allocate buffer for conversion
         cvt.len = static_cast<int>(source->alen);
@@ -287,11 +378,11 @@ bool SND_Sample::convertChunkFrequency() {
             new_chunk->volume = source->volume;
             new_chunk->abuf = cvt.buf;
             new_chunk->alen = cvt.len_cvt;
-            chunk = std::make_shared<MixChunkWrapper>(new_chunk, chunk_source ? chunk_source->fileName : "");
-            this->chunk_millis = SNDcomputeAudioLengthMS(cvt.len_cvt);
+            chunk = std::make_shared<MixChunkWrapper>(new_chunk, source->fileName);
             this->chunk_frequency = this->frequency;
             return true;
         }
     }
     return false;
 }
+#endif

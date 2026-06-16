@@ -1,6 +1,12 @@
 #ifndef PERIMETER_SOUND_H
 #define PERIMETER_SOUND_H
 
+#ifdef PERIMETER_SDL3
+using SND_Channel = MIX_Track*;
+#else
+using SND_Channel = int;
+#endif
+
 //Инициализация/деинициализация библиотеки
 bool SNDInitSound(int mixChannels, int chunkSizeFactor);
 void SNDReleaseSound();

@@ -1,4 +1,5 @@
 #include <thread>
+
 #ifdef PERIMETER_SDL3
 #include <SDL3_mixer/SDL_mixer.h>
 #else
@@ -313,11 +314,17 @@ void VideoPlayer::setPause(bool state) {
 
 void VideoPlayer::startAudioPlayer() {
     if (!sample) return;
-    int channel = sample->play();
+    SND_Channel channel = sample->play();
     if (channel != SND_NO_CHANNEL) {
+#ifdef PERIMETER_SDL3
+        if (!MIX_SetTrackCookedCallback(channel, VideoPlayer::trackBufferEffect, audioBuffer)) {
+            fprintf(stderr, "VideoPlayer MIX_SetTrackCookedCallback error: %s\n", SDL_GetError());
+        }
+#else
         if (!Mix_RegisterEffect(channel, VideoPlayer::channelBufferEffect, nullptr, audioBuffer)) {
             fprintf(stderr, "VideoPlayer Mix_RegisterEffect error: %s\n", Mix_GetError());
         }
+#endif
     }
 }
 
@@ -539,11 +546,17 @@ void VideoPlayer::decodeFrames() {
     //printf("decodedFrames %" PRIsize " %f\n", wrapper->videoFrames.size(), SNDcomputeAudioLengthS(audioBuffer->written));
 }
 
+#ifdef PERIMETER_SDL3
+void VideoPlayer::trackBufferEffect(void *udata, MIX_Track *track, const SDL_AudioSpec *spec, float *stream, int samples) {
+    TODO handle this, how should length be calculated? should AudioBuffer fed with float on ffmpeg side?
+    size_t need = static_cast<size_t>(samples);
+#else // PERIMETER_SDL3
 void VideoPlayer::channelBufferEffect(int _channel, void *stream, int len, void *udata) {
+    size_t need = static_cast<size_t>(len);
+#endif // PERIMETER_SDL3
     AudioBuffer* audioBuffer = static_cast<AudioBuffer*>(udata);
     if (!audioBuffer->written) return;
-    
-    size_t need = static_cast<size_t>(len);
+
 
 #ifdef PERIMETER_DEBUG
     //printf("CBE %" PRIsize " %f -> %" PRIsize " %f\n", audioBuffer->written, SNDcomputeAudioLengthS(audioBuffer->written), need, SNDcomputeAudioLengthS(need));

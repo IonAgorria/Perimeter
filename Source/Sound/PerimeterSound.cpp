@@ -8,37 +8,32 @@
 #include "Sample.h"
 #include "files/files.h"
 
-//Audio formats
-#ifdef PERIMETER_SDL3
-#define AUDIO_FORMAT_8 SDL_AUDIO_S8
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-#define AUDIO_FORMAT_16 SDL_AUDIO_S16LE
-#else
-#define AUDIO_FORMAT_16 SDL_AUDIO_S16BE
-#endif
-#else //PERIMETER_SDL3
-#define AUDIO_FORMAT_8 AUDIO_S8
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-#define AUDIO_FORMAT_16 AUDIO_S16LSB
-#else
-#define AUDIO_FORMAT_16 AUDIO_S16MSB
-#endif
-#endif //PERIMETER_SDL3
-
 static bool g_enable_sound = false;
 static bool g_enable_voices = true;
 static bool enable_sound_log = false;
 
 SND3DListener snd_listener;
 
+int channelGroupsRanges[SND_GROUPS_COUNT * 2] = {};
+//If non zero means its currently playing, the time indicates when
+uint64_t* channelPlayStart = nullptr;
+#ifdef PERIMETER_SDL3
+MIX_Track** indexedTracks = nullptr;
+#endif
+
 static std::string sound_directory="";
 
 namespace SND {
+#ifdef PERIMETER_SDL3
+extern MIX_Mixer* deviceMixer;
+#endif //PERIMETER_SDL3
+size_t totalMixChannels = 0;
 float sound_volume = 1.0f;
 float voice_volume = 1.0f;
 int deviceFrequency = 0;
 int deviceChannels = 0;
-Uint16 deviceFormat = 0;
+SDL_AudioFormat deviceFormat = SDL_AUDIO_UNKNOWN;
+SDL_PropertiesID props_track_looped = 0;
 bool has_sound_init = false;
 
 static float width2d=1,power2d_width=1;
@@ -113,18 +108,92 @@ const std::string& SNDGetSoundDirectory()
 	return sound_directory;
 }
 
-void AllocateMixChannel(int channel, int group) {
-    //printf("AllocateMixChannel %d -> %d\n", channel, group);
-    int ret = Mix_GroupChannel(channel, group);
-    if (ret != 1) {
-        fprintf(stderr, "Error AllocateMixChannel %d -> %d ret = %d\n", channel, group, ret);
+void SNDSetChannelBusy(int channel, bool playing) {
+    if (!has_sound_init || channel < 0 || channel >= totalMixChannels) {
+        return;
+    }
+    channelPlayStart[channel] = playing ? clock_us() : 0;
+}
+
+SND_Channel SNDGetGroupAvailableChannel(int group, bool steal) {
+    if (has_sound_init && 0 <= group && group < SND_GROUPS_COUNT) {
+        uint64_t oldestTime = 0;
+        int oldestIdx = SND_NO_CHANNEL_INDEX;
+
+        int channelsStart = channelGroupsRanges[group * 2];
+        int channelsEnd = channelGroupsRanges[group * 2 + 1];
+        for (int i = channelsStart; i <= channelsEnd; ++i) {
+            uint64_t channelStart = channelPlayStart[i];
+            if (channelStart == 0) {
+                //Found a free channel
+                channelPlayStart[i] = clock_us();
+                return SNDGetChannelFromIndex(i);
+            } else {
+                if (oldestIdx == SND_NO_CHANNEL_INDEX || oldestTime > channelStart) {
+                    //Found an older playing channel
+                    oldestTime = channelStart;
+                    oldestIdx = i;
+                }
+            }
+        }
+        if (steal && oldestIdx != SND_NO_CHANNEL_INDEX) {
+            //No free channel was found and we can steal, use the oldest playing channel
+            return SNDGetChannelFromIndex(oldestIdx);
+        }
+    }
+
+    return SNDGetChannelFromIndex(SND_NO_CHANNEL_INDEX);
+}
+
+
+SND_Channel SNDGetChannelFromIndex(int channelIdx) {
+	if (!has_sound_init || channelIdx == SND_NO_CHANNEL_INDEX
+	 || channelIdx < 0 || channelIdx >= totalMixChannels) {
+	    return SND_NO_CHANNEL;
+	}
+
+#ifdef PERIMETER_SDL3
+    return indexedTracks[channelIdx];
+#else
+    return channel;
+#endif
+}
+
+void SetupMixerChannel(int channel, int group) {
+    //printf("SetupMixerChannel %d -> %d\n", channel, group);
+    channelPlayStart[channel] = 0;
+    if (channelGroupsRanges[group * 2] == SND_NO_CHANNEL_INDEX) {
+        //First channel on this group
+        channelGroupsRanges[group * 2] = channel;
+        channelGroupsRanges[group * 2 + 1] = channel;
+    } else if (channelGroupsRanges[group * 2 + 1] + 1 == channel) {
+        //Allocate the next channel
+        channelGroupsRanges[group * 2 + 1] = channel;
+    } else {
+        fprintf(stderr, "Channel range broken! group %d start %d end %d\n",
+            group, channelGroupsRanges[group * 2], channelGroupsRanges[group * 2 + 1]
+        );
     }
 }
 
 bool SNDInitSound(int mixChannels, int chunkSizeFactor)
 {
-	SNDReleaseSound();
+    SNDReleaseSound();
 
+#ifdef PERIMETER_SDL3
+    if (!MIX_Init()) {
+        fprintf(stderr, "Mix_Init: Failed to init required ogg support %s\n", SDL_GetError());
+    }
+
+    //WAV samples are 22050, OGG samples are 44100 but WAV samples are more critical for effects
+    //Give hint to use 22050 if possible
+    SDL_AudioSpec spec = { SDL_AUDIO_S16LE, 2, 22050 };
+    MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
+    if (!mixer) {
+        fprintf(stderr, "MIX_CreateMixerDevice error: %s\n", SDL_GetError());
+        return false;
+    }
+#else //PERIMETER_SDL3
     int flags = MIX_INIT_OGG;
     int initted = Mix_Init(flags);
     if ((initted&flags) != flags) {
@@ -138,93 +207,136 @@ bool SNDInitSound(int mixChannels, int chunkSizeFactor)
     } else {
         fprintf(stderr, "Mix_OpenAudio error open audio: %s\n", Mix_GetError());
     }
-#else
+#else // GPX
     //Choose audio device
 	struct FORMATS
 	{
 		int channels;
 		int hertz;
-		int bits;
+		int fmt;
 	}
     formats[] = {
-		{1,22050,AUDIO_FORMAT_8},
-		{1,22050,AUDIO_FORMAT_16},
-        {1,44100,AUDIO_FORMAT_16},
-        {2,22050,AUDIO_FORMAT_8},
-		{2,22050,AUDIO_FORMAT_16},
-		{2,44100,AUDIO_FORMAT_16},
+		{1,22050,AUDIO_S8},
+		{1,22050,AUDIO_S16SYS},
+        {1,44100,AUDIO_S16SYS},
+        {2,22050,AUDIO_S8},
+		{2,22050,AUDIO_S16SYS},
+		{2,44100,AUDIO_S16SYS},
 	};
 
 	for(int i=SIZE(formats)-1;i>=0;i--) {
         int chunksize = chunkSizeFactor * (formats[i].hertz / 1000) * formats[i].channels;
-        chunksize *= AUDIO_FORMAT_8 == formats[i].bits ? 1 : 2;
-        if (Mix_OpenAudio(formats[i].hertz, formats[i].bits, formats[i].channels, chunksize) == 0) {
+        chunksize *= AUDIO_S8 == formats[i].fmt ? 1 : 2;
+        if (Mix_OpenAudio(formats[i].hertz, formats[i].fmt, formats[i].channels, chunksize) == 0) {
             open_audio_ok = true;
             break;
         } else {
             fprintf(stderr, "Mix_OpenAudio error with format %i: %s\n", i, Mix_GetError());
         }
 	}
-#endif
-    
     if (!open_audio_ok) {
-        logs("All Mix_OpenAudio failed!\n");
+        fprintf(stderr, "All Mix_OpenAudio failed!\n");
         return false;
     }
-    
+#endif // GPX
+#endif // PERIMETER_SDL3
+
     //Query format info of device
-    int numtimesopened = Mix_QuerySpec(&deviceFrequency, &deviceFormat, &deviceChannels);
-    if(!numtimesopened) {
-        fprintf(stderr, "Mix_QuerySpec error: %s\n",Mix_GetError());
-        return false;
-    } else {
-        const char* format_str;
-        switch(deviceFormat) {
-            default: format_str="Unknown"; break;
+    const char* deviceFormatStr;
 #ifdef PERIMETER_SDL3
-            case SDL_AUDIO_U8: format_str="U8"; break;
-            case SDL_AUDIO_S8: format_str="S8"; break;
-            case AUDIO_U16LSB: format_str="U16LSB"; break;
-            case SDL_AUDIO_S16LE: format_str="S16LSB"; break;
-            case AUDIO_U16MSB: format_str="U16MSB"; break;
-            case SDL_AUDIO_S16BE: format_str="S16MSB"; break;
-#else //PERIMETER_SDL3
-            case AUDIO_U8: format_str="U8"; break;
-            case AUDIO_S8: format_str="S8"; break;
-            case AUDIO_U16LSB: format_str="U16LSB"; break;
-            case AUDIO_S16LSB: format_str="S16LSB"; break;
-            case AUDIO_U16MSB: format_str="U16MSB"; break;
-            case AUDIO_S16MSB: format_str="S16MSB"; break;
-#endif //PERIMETER_SDL3
-        }
-        printf("Audio opened=%d times frequency=%dHz format=%s channels=%d\n", numtimesopened, deviceFrequency, format_str, deviceChannels);
+    SDL_AudioSpec deviceSpec;
+    if(!MIX_GetMixerFormat(deviceMixer, &deviceSpec)) {
+        fprintf(stderr, "MIX_GetMixerFormat error: %s\n", SDL_GetError());
+        return false;
     }
+
+    deviceFrequency = deviceSpec.freq;
+    deviceFormat = deviceSpec.format;
+    deviceChannels = deviceSpec.channels;
+
+    switch(deviceFormat) {
+        default: deviceFormatStr="Unknown"; break;
+        case SDL_AUDIO_U8: deviceFormatStr="U8"; break;
+        case SDL_AUDIO_S8: deviceFormatStr="S8"; break;
+        case SDL_AUDIO_S16LE: deviceFormatStr="S16LE"; break;
+        case SDL_AUDIO_S16BE: deviceFormatStr="S16BE"; break;
+        case SDL_AUDIO_S32LE: deviceFormatStr="S32LE"; break;
+        case SDL_AUDIO_S32BE: deviceFormatStr="S32BE"; break;
+        case SDL_AUDIO_F32LE: deviceFormatStr="F32LE"; break;
+        case SDL_AUDIO_F32BE: deviceFormatStr="F32BE"; break;
+    }
+#else //PERIMETER_SDL3
+    int numtimesopened = Mix_QuerySpec(&deviceFrequency, &deviceFormat, &deviceChannels);
+
+    if(!numtimesopened) {
+        fprintf(stderr, "Mix_QuerySpec error: %s\n", Mix_GetError());
+        return false;
+    }
+    printf("Audio opened=%d times\n", numtimesopened);
+
+    switch(deviceFormat) {
+        default: deviceFormatStr="Unknown"; break;
+        case AUDIO_U8: deviceFormatStr="U8"; break;
+        case AUDIO_S8: deviceFormatStr="S8"; break;
+        case AUDIO_U16LSB: deviceFormatStr="U16LSB"; break;
+        case AUDIO_U16MSB: deviceFormatStr="U16MSB"; break;
+        case AUDIO_S16LSB: deviceFormatStr="S16LSB"; break;
+        case AUDIO_S32MSB: deviceFormatStr="S32MSB"; break;
+        case AUDIO_S32LSB: deviceFormatStr="S32LSB"; break;
+        case AUDIO_S32MSB: deviceFormatStr="S32MSB"; break;
+        case AUDIO_F32LSB: deviceFormatStr="F32LSB"; break;
+        case AUDIO_F32MSB: deviceFormatStr="F32MSB"; break;
+    }
+#endif //PERIMETER_SDL3
+    printf("Audio device frequency=%dHz format=%s channels=%d\n", deviceFrequency, deviceFormatStr, deviceChannels);
 
     has_sound_init = true;
 
     initclock();
 
+    for (int i = 0; i < SND_GROUPS_COUNT; ++i) {
+        channelGroupsRanges[i * 2] = SND_NO_CHANNEL_INDEX;
+        channelGroupsRanges[i * 2 + 1] = SND_NO_CHANNEL_INDEX;
+    }
+    totalMixChannels = mixChannels;
+    channelPlayStart = new uint64_t[totalMixChannels];
+
+#ifdef PERIMETER_SDL3
+    deviceMixer = mixer;
+    indexedTracks = new MIX_Track*[totalMixChannels];
+    for (int i = 0; i < totalMixChannels; ++i) {
+        indexedTracks[i] = MIX_CreateTrack(deviceMixer);
+    }
+
+    SND::props_track_looped = SDL_CreateProperties();
+    if (!SND::props_track_looped) {
+        SDL_Log("Couldn't create props_track_looped: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    SDL_SetNumberProperty(SND::props_track_looped, MIX_PROP_PLAY_LOOPS_NUMBER, -1); //Always loop
+#else
     //Allocate and reserve all channels for groups
     Mix_AllocateChannels(mixChannels);
     Mix_ReserveChannels(mixChannels);
-    
+#endif
+
     //Reserve one for speech
     int index = 0;
-    AllocateMixChannel(index++, SND_GROUP_SPEECH);
+    SetupMixerChannel(index++, SND_GROUP_SPEECH);
     if (4 <= (mixChannels - index)) {
         //Reserve effects per type
         int looped = index + static_cast<int>(mixChannels * 0.30);
         for (; index < looped; index++) {
-            AllocateMixChannel(index, SND_GROUP_EFFECTS_LOOPED);
+            SetupMixerChannel(index, SND_GROUP_EFFECTS_LOOPED);
         }
         int once = index + static_cast<int>(mixChannels * 0.30);
         for (; index < once; index++) {
-            AllocateMixChannel(index, SND_GROUP_EFFECTS_ONCE);
+            SetupMixerChannel(index, SND_GROUP_EFFECTS_ONCE);
         }
     }
     //Assign the rest to common effects group
     for (; index < mixChannels; index++) {
-        AllocateMixChannel(index, SND_GROUP_EFFECTS);
+        SetupMixerChannel(index, SND_GROUP_EFFECTS);
     }
     
     SNDSetupChannelCallback(mixChannels, true);
@@ -243,9 +355,17 @@ void SNDReleaseSound()
 	script3d.RemoveAll();
 	script2d.RemoveAll();
 
+#ifdef PERIMETER_SDL3
+    MIX_DestroyMixer(deviceMixer);
+    MIX_Quit();
+    delete[] indexedTracks;
+#else
     Mix_CloseAudio();
-
     Mix_Quit();
+#endif
+    delete[] channelPlayStart;
+
+    SDL_DestroyProperties(SND::props_track_looped);
 
     //Do at the end so Mix_FreeChunk is called
     has_sound_init = false;
@@ -297,12 +417,20 @@ SND_Sample* SNDLoadSound(const std::string& fxname)
     if (path.empty()) {
         return nullptr;
     }
-    
+
+#ifdef PERIMETER_SDL3
+    MIX_Audio* chunk = MIX_LoadAudio(SND::deviceMixer, path.c_str(), true);
+    if(!chunk) {
+        fprintf(stderr, "Mix_LoadWAV error %s : %s\n", fxname.c_str(), SDL_GetError());
+        return nullptr;
+    }
+#else
     Mix_Chunk* chunk = Mix_LoadWAV(path.c_str());
     if(!chunk) {
         fprintf(stderr, "Mix_LoadWAV error %s : %s\n", fxname.c_str(), Mix_GetError());
         return nullptr;
     }
+#endif
 
     auto wrapper = std::make_shared<MixChunkWrapper>(chunk, fxname);
     auto* sample = new SND_Sample(wrapper);
@@ -744,7 +872,6 @@ bool SNDScript::FindFree(const char* name, ScriptParam*& script, int& nfree)
         if(!sample)
             return false;
 		s.buffer = new SND_Sample(*sample);
-		s.nSamplesPerSec=sample->getChunkSource()->alen;
 
 		if(!b2d)
 		{

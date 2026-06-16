@@ -10,7 +10,16 @@
 #define SND_GROUP_EFFECTS_ONCE 2
 #define SND_GROUP_EFFECTS_LOOPED 3
 
-#define SND_NO_CHANNEL -1
+#define SND_GROUPS_COUNT 4
+
+#define SND_NO_CHANNEL_GROUP (-1)
+#define SND_NO_CHANNEL_INDEX (-1)
+
+#ifdef PERIMETER_SDL3
+#define SND_NO_CHANNEL (nullptr)
+#else
+#define SND_NO_CHANNEL SND_NO_CHANNEL_INDEX
+#endif
 
 //Which volume to use
 enum GLOBAL_VOLUME {

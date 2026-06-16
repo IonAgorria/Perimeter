@@ -67,6 +67,10 @@ protected:
     AVWrapperFrame* popCurrentFrame(std::list<AVWrapperFrame*>& frames) const;
     void Done();
     void decodeFrames();
+#ifdef PERIMETER_SDL3
+    static void trackBufferEffect(void *userdata, MIX_Track *track, const SDL_AudioSpec *spec, float *pcm, int samples);
+#else
     static void channelBufferEffect(int chan, void *stream, int len, void *udata);
+#endif
 #endif
 };
