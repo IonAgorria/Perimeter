@@ -5,12 +5,17 @@
 #define PERIMETER_SAMPLEPARAMS_H
 
 //Mixer channel groups
-#define SND_GROUP_SPEECH 0
-#define SND_GROUP_EFFECTS 1
-#define SND_GROUP_EFFECTS_ONCE 2
-#define SND_GROUP_EFFECTS_LOOPED 3
-
-#define SND_GROUPS_COUNT 4
+enum SND_GROUP {
+    SND_GROUP_SPEECH = 0,
+    SND_GROUP_EFFECTS,
+    SND_GROUP_EFFECTS_ONCE,
+    SND_GROUP_EFFECTS_LOOPED,
+#ifdef PERIMETER_SDL3
+    SND_GROUP_MUSIC,
+#endif
+    //To count number of enums
+    SND_GROUPS_COUNT
+};
 
 #define SND_NO_CHANNEL_GROUP (-1)
 #define SND_NO_CHANNEL_INDEX (-1)

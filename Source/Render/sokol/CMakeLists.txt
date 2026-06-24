@@ -2,27 +2,36 @@
 OPTION(OPTION_PROCESS_SHADERS "Re-Process game shaders" OFF)
 
 #Include Sokol
+message("Fetching sokol")
 FetchContent_Declare(sokol
-        GIT_REPOSITORY    https://github.com/floooh/sokol
-        GIT_TAG           "4bda1469d3b311af03a34dd956460776c920dc2e"
-        GIT_SHALLOW       OFF
+        URL https://github.com/floooh/sokol/archive/4bda1469d3b311af03a34dd956460776c920dc2e.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP ON
+        #GIT_REPOSITORY    https://github.com/floooh/sokol
+        #GIT_TAG           "4bda1469d3b311af03a34dd956460776c920dc2e"
+        #GIT_SHALLOW       OFF
 )
 FetchContent_MakeAvailable(sokol)
 
 #Include ImGui
+message("Fetching imgui")
 FetchContent_Declare(imgui
-        GIT_REPOSITORY    https://github.com/ocornut/imgui
-        GIT_TAG           "cb16568fca5297512ff6a8f3b877f461c4323fbe"
-        GIT_SHALLOW       OFF
+        URL https://github.com/ocornut/imgui/archive/cb16568fca5297512ff6a8f3b877f461c4323fbe.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP ON
+        #GIT_REPOSITORY    https://github.com/ocornut/imgui
+        #GIT_TAG           "cb16568fca5297512ff6a8f3b877f461c4323fbe"
+        #GIT_SHALLOW       OFF
 )
 FetchContent_MakeAvailable(imgui)
 
 IF (OPTION_PROCESS_SHADERS)
     #Download precompiled sokol-shdc
+    message("Fetching sokol-tools-bin")
     FetchContent_Declare(sokol-tools-bin
-            GIT_REPOSITORY    https://github.com/floooh/sokol-tools-bin
-            GIT_TAG           "f1af4529746b804d6c79d5a36c333aec489fab27"
-            GIT_SHALLOW       OFF
+            URL https://github.com/floooh/sokol-tools-bin/archive/f1af4529746b804d6c79d5a36c333aec489fab27.zip
+            DOWNLOAD_EXTRACT_TIMESTAMP ON
+            #GIT_REPOSITORY    https://github.com/floooh/sokol-tools-bin
+            #GIT_TAG           "f1af4529746b804d6c79d5a36c333aec489fab27"
+            #GIT_SHALLOW       OFF
     )
     FetchContent_MakeAvailable(sokol-tools-bin)
 

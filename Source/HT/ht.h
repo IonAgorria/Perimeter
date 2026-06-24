@@ -73,7 +73,11 @@ protected:
 	int interpolation_timer_;
 	float interpolation_factor_;
 
+#ifdef PERIMETER_SDL3
+	SDL_Semaphore* end_logic;
+#else
 	SDL_semaphore* end_logic;
+#endif
 
 	struct DELETE_DATA
 	{

@@ -892,7 +892,7 @@ void LoadSoundScriptTable() {
 
 void InitSound()
 {
-    int mixChannels = 30; //Default SDL_mixer is 8, DirectSound has 31
+    int mixChannels = 32; //Default SDL_mixer is 8, DirectSound has 31
     int chunkSizeFactor = 12; //1056 bytes under 2 channel 22khz 16 bits 
     terAudioEnable = true;
     terSoundVolume = 0.75f;
@@ -1265,6 +1265,12 @@ int SDL_main(int argc, char *argv[])
 #endif
 
     //Start SDL stuff
+#ifdef PERIMETER_SDL3
+    int sdlresult = SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    if (sdlresult < 0) {
+        ErrH.Abort("Error initializing SDL", XERR_CRITICAL, sdlresult, SDL_GetError());
+    }
+#else
     int sdlresult = SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     if (sdlresult < 0) {
         ErrH.Abort("Error initializing SDL", XERR_CRITICAL, sdlresult, SDL_GetError());
@@ -1273,6 +1279,7 @@ int SDL_main(int argc, char *argv[])
     if (sdlresult < 0) {
         ErrH.Abort("Error initializing SDLNet", XERR_CRITICAL, sdlresult, SDLNet_GetError());
     }
+#endif
     
     //Init keys
     initKeyboardMapping();

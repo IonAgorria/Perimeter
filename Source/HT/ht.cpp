@@ -131,11 +131,11 @@ void HTManager::GameClose()
             end_logic = SDL_CreateSemaphore(0);
 
 #ifdef PERIMETER_SDL3
-            uint32_t ret = SDL_WaitSemaphore(end_logic);
+            SDL_WaitSemaphore(end_logic);
 #else
             uint32_t ret = SDL_SemWait(end_logic);
-#endif
             xassert(ret == 0);
+#endif
 
             SDL_DestroySemaphore(end_logic);
             end_logic = nullptr;

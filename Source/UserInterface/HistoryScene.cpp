@@ -4,9 +4,7 @@
 #include "GameShell.h"
 #include "GameShellSq.h"
 #include "qd_textdb.h"
-#include "tx3d.hpp"
 #include "Localization.h"
-#include "Sample.h"
 #include "AudioPlayer.h"
 
 extern GameShell* gameShell;

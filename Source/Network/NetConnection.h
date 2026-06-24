@@ -56,7 +56,11 @@ private:
     std::string host;
     uint16_t port = 0;
 #ifndef EMSCRIPTEN
+#ifdef PERIMETER_SDL3
+    NET_Address* net_addr;
+#else
     uint32_t addr4 = INADDR_NONE; // 32-bit IPv4 host address
+#endif
 #endif
 
 public:
@@ -69,7 +73,12 @@ public:
     bool operator==(const NetAddress& other) const;
 
 #ifndef EMSCRIPTEN
-    TCPsocket openTCP(int32_t timeout) const;
+#ifdef PERIMETER_SDL3
+    NET_Server* listenTCP() const;
+    NET_StreamSocket* connectTCP(int32_t timeout) const;
+#else
+    TCPsocket connectTCP(int32_t timeout) const;
+#endif
 #endif
 
     void reset();
@@ -93,7 +102,17 @@ public:
     static const int32_t NT_STATUS_CLOSED  = -0x1000003;
     static const int32_t NT_STATUS_ERROR   = -0x1000004;
 
-    static NetTransport* create(const NetAddress&, int32_t);
+    /**
+     * Create a transport to listen incoming connections
+     * @return transport if listener was created
+     */
+    static NetTransport* listen(const NetAddress& address);
+
+    /**
+     * Connect to the remote address
+     * @return transport if connected
+     */
+    static NetTransport* connect(const NetAddress& address, int32_t timeout);
 
     NetTransport() = default;
     virtual ~NetTransport() {
@@ -105,6 +124,13 @@ public:
     
     /** @return true if transport is closed */
     virtual bool is_closed() const { return true; }
+
+    /**
+     * Accepts a new incoming connection if any and sets it at transport ptr
+     * If there is no incoming connection the transport is untouched
+     * @return false if error occurred, true if OK
+     */
+    virtual bool acceptIncoming(NetTransport** transport) = 0;
 
     /**
      * Sends data using internal send_raw
@@ -133,30 +159,42 @@ public:
 /**
  * Encapsulates TCP transport
  */
-class NetTransportTCP: public NetTransport{
+class NetTransportTCP: public NetTransport {
 private:
+#ifdef PERIMETER_SDL3
+    NET_Server* server = nullptr;
+    NET_StreamSocket* socket = nullptr;
+#else
     SDLNet_SocketSet socket_set = nullptr;
     TCPsocket socket = nullptr;
+#endif
     
 protected:
     int32_t send_raw(const uint8_t* buffer, uint32_t len, int32_t timeout) override;
     int32_t receive_raw(uint8_t* buffer, uint32_t len, int32_t timeout) override;
     
 public:
+#ifdef PERIMETER_SDL3
+    explicit NetTransportTCP(NET_Server* socket);
+    explicit NetTransportTCP(NET_StreamSocket* socket);
+#else
     explicit NetTransportTCP(TCPsocket socket);
+#endif
+
     ~NetTransportTCP() override {
         close();
-    };
+    }
+
+    bool acceptIncoming(NetTransport** transport) override;
 
     void close() override;
 
     bool is_closed() const override {
         return socket == nullptr;
     }
-
-    TCPsocket getSocket();
 };
 
+#ifdef EMSCRIPTEN
 /**
  * Encapsulates WebSocket transport
  */
@@ -176,7 +214,9 @@ public:
 
     void close() override;
     bool is_closed() const override;
+    bool acceptIncoming(NetTransport** transport) override;
 };
+#endif //EMSCRIPTEN
 
 /**
  * Connection states

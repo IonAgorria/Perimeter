@@ -393,6 +393,7 @@ IF(PERIMETER_EXODUS)
 ENDIF()
 
 #simpleini
+message("simpleini")
 FetchContent_Declare(simpleini
         GIT_REPOSITORY    https://github.com/brofield/simpleini
         GIT_TAG           "7350fcc9228f410309734c3fb6dae2bf513cdd98"
@@ -405,6 +406,7 @@ IF(NOT PERIMETER_WINDOWS)
     #Non Windows target specifics
 
     #pevents retrieval
+    message("Fetching pevents")
     FetchContent_Declare(pevents
             GIT_REPOSITORY    https://github.com/neosmart/pevents
             GIT_TAG           "d6afcbc629cf806f6465238849278e530e1d56fb"

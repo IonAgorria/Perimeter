@@ -7,7 +7,7 @@
 #ifdef PERIMETER_SDL3
 static void callbackTrackStopped(void *userdata, MIX_Track *track) {
     SND_Sample* sample = reinterpret_cast<SND_Sample*>(userdata);
-    printf("Channel %p finished playing %p.\n", track);
+    printf("Channel %p finished playing %p.\n", track, sample);
     if (sample->track == track) {
         sample->track = nullptr;
     }
@@ -76,7 +76,7 @@ SND_Sample::SND_Sample(const std::shared_ptr<MixChunkWrapper>& chunk)  {
 SND_Sample::~SND_Sample() {
 #ifdef PERIMETER_SDL3
     if (track) {
-        MIX_StopTrack(track);
+        MIX_StopTrack(track, 0);
         track = nullptr;
     }
 #endif
@@ -173,7 +173,10 @@ SND_Channel SND_Sample::play() {
 #ifdef PERIMETER_SDL3
         MIX_SetTrackStoppedCallback(channel, callbackTrackStopped, this);
         MIX_SetTrackAudio(channel, chunk_play);
-        MIX_PlayTrack(channel, SND::props_track_looped);
+        if (!MIX_PlayTrack(channel, loop ? SND::props_track_looped : SND::props_track_default)) {
+            fprintf(stderr, "MIX_PlayTrack error (%s): %s\n",  chunk->fileName.c_str(), SDL_GetError());
+            channel = SND_NO_CHANNEL;
+        }
 #else
         channel = Mix_PlayChannel(channel, chunk_play, loop ? -1 : 0);
         if (channel == -1) { //Return's -1 if fails to play

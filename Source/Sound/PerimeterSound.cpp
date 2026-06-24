@@ -33,6 +33,7 @@ float voice_volume = 1.0f;
 int deviceFrequency = 0;
 int deviceChannels = 0;
 SDL_AudioFormat deviceFormat = SDL_AUDIO_UNKNOWN;
+SDL_PropertiesID props_track_default = 0;
 SDL_PropertiesID props_track_looped = 0;
 bool has_sound_init = false;
 
@@ -302,28 +303,35 @@ bool SNDInitSound(int mixChannels, int chunkSizeFactor)
     channelPlayStart = new uint64_t[totalMixChannels];
 
 #ifdef PERIMETER_SDL3
+    //Allocate extra for music track
+    totalMixChannels += 1;
+
     deviceMixer = mixer;
     indexedTracks = new MIX_Track*[totalMixChannels];
     for (int i = 0; i < totalMixChannels; ++i) {
         indexedTracks[i] = MIX_CreateTrack(deviceMixer);
     }
 
+    SND::props_track_default = 0;
     SND::props_track_looped = SDL_CreateProperties();
     if (!SND::props_track_looped) {
         SDL_Log("Couldn't create props_track_looped: %s", SDL_GetError());
-        return SDL_APP_FAILURE;
+        return false;
     }
     SDL_SetNumberProperty(SND::props_track_looped, MIX_PROP_PLAY_LOOPS_NUMBER, -1); //Always loop
 #else
     //Allocate and reserve all channels for groups
-    Mix_AllocateChannels(mixChannels);
-    Mix_ReserveChannels(mixChannels);
+    Mix_AllocateChannels(totalMixChannels);
+    Mix_ReserveChannels(totalMixChannels);
 #endif
 
     //Reserve one for speech
     int index = 0;
     SetupMixerChannel(index++, SND_GROUP_SPEECH);
-    if (4 <= (mixChannels - index)) {
+#ifdef PERIMETER_SDL3
+    SetupMixerChannel(index++, SND_GROUP_MUSIC);
+#endif
+    if (4 <= totalMixChannels - index) {
         //Reserve effects per type
         int looped = index + static_cast<int>(mixChannels * 0.30);
         for (; index < looped; index++) {
@@ -421,7 +429,7 @@ SND_Sample* SNDLoadSound(const std::string& fxname)
 #ifdef PERIMETER_SDL3
     MIX_Audio* chunk = MIX_LoadAudio(SND::deviceMixer, path.c_str(), true);
     if(!chunk) {
-        fprintf(stderr, "Mix_LoadWAV error %s : %s\n", fxname.c_str(), SDL_GetError());
+        fprintf(stderr, "MIX_LoadAudio sound error %s : %s\n", fxname.c_str(), SDL_GetError());
         return nullptr;
     }
 #else
@@ -970,7 +978,7 @@ bool SND2DPlaySound(const char* name,float x)
 
 	s.begin_play_time=clockf();
     s.played_cycled = false;
-    int channel = s.buffer->play();
+    SND_Channel channel = s.buffer->play();
 	if (channel == SND_NO_CHANNEL) {
         s.used=false;
         return false;
@@ -1029,7 +1037,7 @@ bool SND2DSound::Play(bool cycled)
                                      ? GLOBAL_VOLUME_VOICE
                                      : GLOBAL_VOLUME_CHANNEL;
     s.buffer->looped = cycled;
-    int channel = s.buffer->play();
+    SND_Channel channel = s.buffer->play();
     if (channel == SND_NO_CHANNEL) {
         return false;
     }

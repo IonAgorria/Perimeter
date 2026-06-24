@@ -255,7 +255,6 @@ int16_t GetVKFromScanCode(SDL_Scancode scancode) {
         case SDL_SCANCODE_MEDIA_PREVIOUS_TRACK:
         case SDL_SCANCODE_MEDIA_STOP:
         case SDL_SCANCODE_MEDIA_PLAY:
-        case SDL_SCANCODE_MUTE:
         case SDL_SCANCODE_MEDIA_SELECT:
         case SDL_SCANCODE_MEDIA_EJECT:
         case SDL_SCANCODE_MEDIA_REWIND:
@@ -270,18 +269,10 @@ int16_t GetVKFromScanCode(SDL_Scancode scancode) {
         case SDL_SCANCODE_EJECT:
         case SDL_SCANCODE_AUDIOREWIND:
         case SDL_SCANCODE_AUDIOFASTFORWARD:
-#endif
         case SDL_SCANCODE_WWW:
         case SDL_SCANCODE_MAIL:
         case SDL_SCANCODE_CALCULATOR:
         case SDL_SCANCODE_COMPUTER:
-        case SDL_SCANCODE_AC_SEARCH:
-        case SDL_SCANCODE_AC_HOME:
-        case SDL_SCANCODE_AC_BACK:
-        case SDL_SCANCODE_AC_FORWARD:
-        case SDL_SCANCODE_AC_STOP:
-        case SDL_SCANCODE_AC_REFRESH:
-        case SDL_SCANCODE_AC_BOOKMARKS:
         case SDL_SCANCODE_BRIGHTNESSDOWN:
         case SDL_SCANCODE_BRIGHTNESSUP:
         case SDL_SCANCODE_DISPLAYSWITCH:
@@ -289,7 +280,16 @@ int16_t GetVKFromScanCode(SDL_Scancode scancode) {
         case SDL_SCANCODE_KBDILLUMDOWN:
         case SDL_SCANCODE_KBDILLUMUP:
         case SDL_SCANCODE_APP1:
-        case SDL_SCANCODE_APP2:  return 0;
+        case SDL_SCANCODE_APP2:
+#endif
+        case SDL_SCANCODE_AC_SEARCH:
+        case SDL_SCANCODE_AC_HOME:
+        case SDL_SCANCODE_AC_BACK:
+        case SDL_SCANCODE_AC_FORWARD:
+        case SDL_SCANCODE_AC_STOP:
+        case SDL_SCANCODE_AC_REFRESH:
+        case SDL_SCANCODE_AC_BOOKMARKS:
+            return 0;
     }
     return -1;
 }
@@ -455,7 +455,12 @@ bool isPressed(uint32_t key) {
     
     //Get state of keys
     int numkeys;
-    const Uint8* state = SDL_GetKeyboardState(&numkeys);
+#ifdef PERIMETER_SDL3
+    const bool* state;
+#else
+    const Uint8* state;
+#endif
+    state = SDL_GetKeyboardState(&numkeys);
 
     //Check the scancodes associated to this key if one is pressed
     for (const SDL_Scancode& scancode : scancodes) {

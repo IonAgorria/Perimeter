@@ -2,6 +2,7 @@
 #define PERIMETER_SOUND_H
 
 #ifdef PERIMETER_SDL3
+struct MIX_Track;
 using SND_Channel = MIX_Track*;
 #else
 using SND_Channel = int;

@@ -6,6 +6,7 @@ ELSE()
 ENDIF ()
 
 #GameMath retrieval
+message("Fetching gamemath")
 FetchContent_Declare(gamemath
 		GIT_REPOSITORY    https://github.com/caiiiycuk/perimeter-gamemath
 		GIT_TAG           "155ab00471b10b0a1e19c18588e6ccf9a356cb8a"
