@@ -21,7 +21,8 @@ extern int deviceFrequency;
 extern int deviceChannels;
 extern SDL_AudioFormat deviceFormat;
 #ifdef PERIMETER_SDL3
-extern SDL_PropertiesID props_track_looped = 0;
+extern SDL_PropertiesID props_track_default;
+extern SDL_PropertiesID props_track_looped;
 extern MIX_Mixer* deviceMixer;
 #endif
 ///Minimum required volume to be played, this avoids starving channels by too many low volume effects

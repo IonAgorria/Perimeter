@@ -71,7 +71,11 @@ void ControlsConverter::LoadKeyNames() {
                 SDL_Scancode code = getSDLScanCodeFromVK(i);
                 std::string name;
 
+#ifdef PERIMETER_SDL3
+                SDL_Keycode keycode = SDL_GetKeyFromScancode(code, SDL_KMOD_NONE, false);
+#else
                 SDL_Keycode keycode = SDL_GetKeyFromScancode(code);
+#endif
                 name = SDL_GetKeyName(keycode);
                 name = convertToCodepage(name.c_str(), getLocale(), 0);
                 if (name.empty()) {

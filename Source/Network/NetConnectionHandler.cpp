@@ -50,43 +50,49 @@ void NetConnectionHandler::readConnectionMessages(NetConnection* connection, siz
 void NetConnectionHandler::acceptConnection() {
 #ifndef EMSCRIPTEN
     if (accept_transport) {
-        TCPsocket incoming_socket = SDLNet_TCP_Accept(accept_transport->getSocket());
-        if(!incoming_socket) {
-            SDLNet_SetError(nullptr);
-        } else {
-            NetConnection* incoming = nullptr;
-            
-            //Find any closed connection in array
-            for (auto& entry : connections) {
-                if (entry.second->isClosed()) {
-                    incoming = entry.second; 
-                    NetTransportTCP* transport = new NetTransportTCP(incoming_socket);
-                    incoming->set_transport(transport, entry.first);
-                    //Set initial time of contact
-                    incoming->time_contact = clock_us();
-                    break;
-                }
-            }
+        NetTransport* transport = nullptr;
+        bool accept_ok = accept_transport->acceptIncoming(&transport);
+        if (!accept_ok || !transport) {
+            return;
+        }
+        NetConnection* incoming = nullptr;
 
-            //Couldn't find any connection to reuse, create new
-            if (incoming == nullptr) {
-                incoming = newConnectionFromTransport(
-                    new NetTransportTCP(incoming_socket),
-                    NETID_CLIENTS_START + connections.size()
-                );
+        //Find any closed connection in array
+        for (auto& entry : connections) {
+            if (entry.second->isClosed()) {
+                incoming = entry.second;
+                incoming->set_transport(transport, entry.first);
+                transport = nullptr;
+                //Set initial time of contact
+                incoming->time_contact = clock_us();
+                break;
             }
+        }
 
-            if (incoming) {
-                if (incoming->getNETID() == NETID_NONE) {
-                    //If netid is NONE then it wasnt allocated into pool
-                    fprintf(stderr, "Incoming connection couldn't be allocated\n");
-                    //Send the reply that game is full and close it without reading connection info
-                    net_center->SendClientHandshakeResponse(incoming, incoming->getNETID(),
-                                                            e_ConnectResult::CR_ERR_GAME_FULL);
-                    //Delete connection since is not stored anywhere
-                    delete incoming;
-                }
+        //Couldn't find any connection to reuse, create new
+        if (incoming == nullptr) {
+            incoming = newConnectionFromTransport(
+                transport,
+                NETID_CLIENTS_START + connections.size()
+            );
+            transport = nullptr;
+        }
+
+        if (incoming) {
+            if (incoming->getNETID() == NETID_NONE) {
+                //If netid is NONE then it wasnt allocated into pool
+                fprintf(stderr, "Incoming connection couldn't be allocated\n");
+                //Send the reply that game is full and close it without reading connection info
+                net_center->SendClientHandshakeResponse(incoming, incoming->getNETID(),
+                                                        e_ConnectResult::CR_ERR_GAME_FULL);
+                //Delete connection since is not stored anywhere
+                delete incoming;
             }
+        }
+
+        if (transport) {
+            //Transport was not wrapped by a connection, delete it
+            delete transport;
         }
     }
 #endif
@@ -310,7 +316,7 @@ bool NetConnectionHandler::startHost(uint16_t listen_port, bool start_public_roo
     if (ok && 0 < listen_port) {
         NetAddress addr;
         NetAddress::resolve(addr, "0.0.0.0", listen_port);
-        NetTransport* transport = NetTransport::create(addr, 0);
+        NetTransport* transport = NetTransport::listen(addr);
         if (transport == nullptr || dynamic_cast<NetTransportTCP*>(transport) == nullptr) {
             ok = false;
             delete transport;
@@ -343,7 +349,7 @@ bool NetConnectionHandler::startRelayRoom() {
         return false;
     }
     LogMsg("Current primary relay selected is '%s'\n", relay.address.c_str());
-    NetTransport* transport = NetTransport::create(relay.net_address, NET_RELAY_CONNECT_TIMEOUT);
+    NetTransport* transport = NetTransport::connect(relay.net_address, NET_RELAY_CONNECT_TIMEOUT);
     if (!transport) {
         return false;
     }
@@ -404,7 +410,7 @@ bool NetConnectionHandler::startRelayRoom() {
         connection->close();
         LogMsg("Connecting to secondary relay '%s' for room creation\n", host_address_str.c_str());
 
-        transport = NetTransport::create(host_address, NET_RELAY_CONNECT_TIMEOUT);
+        transport = NetTransport::connect(host_address, NET_RELAY_CONNECT_TIMEOUT);
         if (!transport) {
             return false;
         } else {
@@ -444,7 +450,7 @@ NetConnection* NetConnectionHandler::startRelayRoomConnection(const NetAddress& 
     max_connections = 1;
 
     //Start relay connection and assign as host since it will act as one after sending join room
-    NetTransport *transport = NetTransport::create(address, NET_RELAY_CONNECT_TIMEOUT);
+    NetTransport *transport = NetTransport::connect(address, NET_RELAY_CONNECT_TIMEOUT);
     if (!transport) {
         return nullptr;
     }
@@ -514,7 +520,7 @@ void NetConnectionHandler::handleRelayDisconnected() {
 NetConnection* NetConnectionHandler::startDirectConnection(const NetAddress& address) {
     max_connections = 1;
 
-    NetTransport *transport = NetTransport::create(address, 0);
+    NetTransport *transport = NetTransport::connect(address, 0);
 	if (!transport) {
         return nullptr;
 	}

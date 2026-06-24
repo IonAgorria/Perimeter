@@ -139,24 +139,45 @@ void GraphOptions::load(const char* sectionName, const char* iniFileName) {
 
     //Get display modes for screens
     Vect2i smallest(0, 0);
-    SDL_DisplayMode current;
+    SDL_DisplayMode* current = nullptr;
+#ifdef PERIMETER_SDL3
+    int num_displays = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&num_displays);
+    if (!displays) {
+            fprintf(stderr, "Could not get display IDs: %s", SDL_GetError());
+    }
+    for (int i = 0; i < num_displays; ++i){
+        SDL_DisplayID id = displays[i];
+        current = SDL_GetCurrentDisplayMode(id);
+        if (!current) {
+            fprintf(stderr, "Could not get display mode for display %d id %" PRIu32 " error %s", i, id, SDL_GetError());
+            continue;
+        }
+#else
+    SDL_DisplayMode current_mode;
+    current = &current_mode;
     for (int i = 0; i < SDL_GetNumVideoDisplays(); ++i){
-        int result = SDL_GetCurrentDisplayMode(i, &current);
+        int result = SDL_GetCurrentDisplayMode(i, current);
         if (result != 0) {
             fprintf(stderr, "Could not get display mode for display %d: %s", i, SDL_GetError());
             continue;
         }
+#endif
 
-        //printf("Display %d: %dx%d %dhz\n", i, current.w, current.h, current.refresh_rate);
-        resSet.emplace(true, i, current.w, current.h, current.refresh_rate);
-        resSet.emplace(false, -1, current.w, current.h, 0);
-        if (smallest.x == 0 || current.w < smallest.x) {
-            smallest.x = current.w;
+        //printf("Display %d: %dx%d %dhz\n", i, current->w, current->h, current->refresh_rate);
+        resSet.emplace(true, i, current->w, current->h, current->refresh_rate);
+        resSet.emplace(false, -1, current->w, current->h, 0);
+        if (smallest.x == 0 || current->w < smallest.x) {
+            smallest.x = current->w;
         }
-        if (smallest.y == 0 || current.h < smallest.y) {
-            smallest.y = current.h;
+        if (smallest.y == 0 || current->h < smallest.y) {
+            smallest.y = current->h;
         }
     }
+#ifdef PERIMETER_SDL3
+    SDL_free(displays);
+    displays = nullptr;
+#endif
     
     //Add source resolutions, only if they are smaller than smallest dimensions (user can still resize manually)
     for (const UIResolution& res : getSourceUIResolutions()) {

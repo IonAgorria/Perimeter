@@ -35,6 +35,10 @@ public:
     int channel_group = SND_NO_CHANNEL_GROUP;
     ///Which global volume source to use
     GLOBAL_VOLUME global_volume_select = GLOBAL_VOLUME_CHANNEL;
+#ifdef PERIMETER_SDL3
+    //The current track playing this
+    MIX_Track* track = nullptr;
+#endif
 
     explicit SND_Sample(const std::shared_ptr<MixChunkWrapper>& chunk);
     
@@ -111,11 +115,7 @@ private:
     ///Updates the channel effects from current sample effects, internal function that accepts channel
     bool updateEffects(SND_Channel channel);
 
-#ifdef PERIMETER_SDL3
-    //The current track playing this
-    MIX_Track* track = nullptr;
-
-#else
+#ifndef PERIMETER_SDL3
     ///Current frequency of chunk loaded
     ///(which might have been converted from chunk_source)
     float chunk_frequency = 1.0f;

@@ -1,5 +1,8 @@
 #include "NetIncludes.h"
 #include "NetConnection.h"
+
+#include <future>
+
 #include "crc.h"
 #include "P2P_interface.h"
 #include "NetConnectionAux.h"
@@ -21,35 +24,106 @@ NetAddress::NetAddress() = default;
 const static char* NET_ADDRESS_UDP_PING_DATA = "HostPing";
 const static char* NET_ADDRESS_UDP_PONG_DATA = "HostPong";
 
-TCPsocket NetAddress::openTCP(int32_t timeout) const {
+#ifdef PERIMETER_SDL3
+NET_Server* NetAddress::listenTCP() const {
+    NET_Server* tcp_server;
+    if (host.empty() || host == "0.0.0.0") {
+        tcp_server = NET_CreateServer(nullptr, port, 0);
+    } else {
+        tcp_server = NET_CreateServer(net_addr, port, 0);
+    }
+    if (tcp_server == nullptr) {
+        fprintf(stderr, "NetAddress::listenTCP failed to open TCP listener address %s error %s\n", getString().c_str(), SDL_GetError());
+        return nullptr;
+    }
+    return tcp_server;
+}
+
+NET_StreamSocket* NetAddress::connectTCP(int32_t timeout) const {
+#else
+TCPsocket NetAddress::connectTCP(int32_t timeout) const {
     if (addr4 == INADDR_NONE) {
-        fprintf(stderr, "NetAddress::openTCP ip4 address is NONE\n");
+        fprintf(stderr, "NetAddress::connectTCP ip4 address is NONE\n");
         return nullptr;
     }
     IPaddress ipaddr;
     ipaddr.host = addr4;
     SDLNet_Write16(port, &ipaddr.port);
+#endif
 
     //Ping over UDP with reduced timeout in case host is down so that TCP open won't stay waiting all day
+    //This is used mostly for connections against relay
     if (0 < timeout) {
-        UDPsocket udp_socket = SDLNet_UDP_Open(0);
+#ifdef PERIMETER_SDL3
+        NET_DatagramSocket* udp_socket = NET_CreateDatagramSocket(nullptr, 0, 0);
         if (udp_socket == nullptr) {
-            fprintf(stderr, "NetAddress::openTCP failed to open UDP address %s error %s\n", getString().c_str(), SDLNet_GetError());
+            fprintf(stderr, "NetAddress::connectTCP failed to open UDP address %s error %s\n", getString().c_str(), SDL_GetError());
             return nullptr;
         }
-        
-        const static size_t UPD_PACKET_DATA_LEN = 32;
+#else
+        UDPsocket udp_socket = SDLNet_UDP_Open(0);
+        if (udp_socket == nullptr) {
+            fprintf(stderr, "NetAddress::connectTCP failed to open UDP address %s error %s\n", getString().c_str(), SDLNet_GetError());
+            return nullptr;
+        }
+#endif
+
         size_t ping_str_len = strlen(NET_ADDRESS_UDP_PING_DATA);
         size_t pong_str_len = strlen(NET_ADDRESS_UDP_PONG_DATA);
+#ifndef PERIMETER_SDL3
+        const static size_t UPD_PACKET_DATA_LEN = 32;
         uint8_t upd_packet_data[UPD_PACKET_DATA_LEN] = {};
+#endif
+
         int32_t start_time = clocki();
+        const int time_sleep = 10;
         while (true) {
             if (start_time + timeout < clocki()) {
-                fprintf(stderr, "NetAddress::openTCP timeout waiting for UDP ping response address %s error %s\n",
-                        getString().c_str(), SDLNet_GetError());
+                fprintf(stderr, "NetAddress::connectTCP timeout waiting for UDP ping response address %s\n",
+                        getString().c_str());
                 return nullptr;
             }
+#ifdef PERIMETER_SDL3
+            if (!NET_SendDatagram(udp_socket, net_addr, port, NET_ADDRESS_UDP_PING_DATA, static_cast<int>(ping_str_len))) {
+                fprintf(stderr, "NetAddress::connectTCP failed to send UDP ping address %s error %s\n",
+                        getString().c_str(), SDL_GetError());
+                return nullptr;
+            }
+
+            Sleep(time_sleep);
+
+            NET_Datagram* udp_packet = nullptr;
+            bool udp_recv_ok = NET_ReceiveDatagram(udp_socket, &udp_packet);
+            if (!udp_recv_ok) {
+                if (udp_packet) {
+                    NET_DestroyDatagram(udp_packet);
+                }
+
+                //Error ocurred, abort
+                fprintf(stderr, "NetAddress::connectTCP failed to recv UDP datagram address %s error %s\n",
+                        getString().c_str(), SDL_GetError());
+                return nullptr;
+            } else if (udp_packet) {
+                if (udp_packet->buflen != pong_str_len) {
+                    fprintf(stderr, "NetAddress::connectTCP failed UDP pong len %" PRIi32 " address %s error %s\n",
+                            udp_packet->buflen, getString().c_str(), SDL_GetError());
+                    return nullptr;
+                }
+                if (memcmp(udp_packet->buf, NET_ADDRESS_UDP_PONG_DATA, pong_str_len) != 0) {
+                    fprintf(stderr, "NetAddress::connectTCP failed UDP pong data mismatch address %s error %s\n",
+                            getString().c_str(), SDL_GetError());
+                    return nullptr;
+                }
+
+                NET_DestroyDatagram(udp_packet);
+            } else {
+                //No packet yet, wait until timeout
+                continue;
+            }
+
+#else
             memcpy(reinterpret_cast<char*>(upd_packet_data), NET_ADDRESS_UDP_PING_DATA, ping_str_len);
+
             UDPpacket udp_packet;
             udp_packet.channel = -1;
             udp_packet.data = upd_packet_data;
@@ -59,44 +133,67 @@ TCPsocket NetAddress::openTCP(int32_t timeout) const {
             udp_packet.address = ipaddr;
             int status = SDLNet_UDP_Send(udp_socket, -1, &udp_packet);
             if (status != 1) {
-                fprintf(stderr, "NetAddress::openTCP failed to send UDP ping %d address %s error %s\n",
+                fprintf(stderr, "NetAddress::connectTCP failed to send UDP ping %d address %s error %s\n",
                         status, getString().c_str(), SDLNet_GetError());
                 return nullptr;
             }
 
-            Sleep(50);
+            Sleep(time_sleep);
 
             status = SDLNet_UDP_Recv(udp_socket, &udp_packet);
             if (status == 1) {
                 if (udp_packet.len != pong_str_len) {
-                    fprintf(stderr, "NetAddress::openTCP failed UDP pong len %" PRIi32 " address %s error %s\n",
+                    fprintf(stderr, "NetAddress::connectTCP failed UDP pong len %" PRIi32 " address %s error %s\n",
                             udp_packet.len, getString().c_str(), SDLNet_GetError());
                     return nullptr;
                 }
                 if (memcmp(udp_packet.data, NET_ADDRESS_UDP_PONG_DATA, pong_str_len) != 0) {
-                    fprintf(stderr, "NetAddress::openTCP failed UDP pong data mismatch address %s error %s\n",
+                    fprintf(stderr, "NetAddress::connectTCP failed UDP pong data mismatch address %s error %s\n",
                             getString().c_str(), SDLNet_GetError());
                     return nullptr;
                 }
                 break;
             } else if (status != 0) {
                 //Keep trying until timeout
-                fprintf(stderr, "NetAddress::openTCP failed to recv UDP ping %d address %s error %s\n",
+                fprintf(stderr, "NetAddress::connectTCP failed to recv UDP ping %d address %s error %s\n",
                         status, getString().c_str(), SDLNet_GetError());
+                continue;
             }
+#endif
         }
     }
 
     //Do TCP connection
+#ifdef PERIMETER_SDL3
+    NET_StreamSocket* tcp_socket = NET_CreateClient(net_addr, port, 0);
+    if (tcp_socket == nullptr) {
+        fprintf(stderr, "NetAddress::connectTCP failed to open TCP address %s error %s\n", getString().c_str(), SDL_GetError());
+        return nullptr;
+    }
+    NET_Status status = NET_WaitUntilConnected(tcp_socket, timeout);
+    if (status != NET_SUCCESS) {
+        NET_DestroyStreamSocket(tcp_socket);
+        fprintf(stderr, "NetAddress::connectTCP got non success opening TCP address %s: status %d error %s\n", getString().c_str(), status, SDL_GetError());
+        return nullptr;
+    }
+#else
     TCPsocket tcp_socket = SDLNet_TCP_Open(&ipaddr);
     if (tcp_socket == nullptr) {
-        fprintf(stderr, "NetAddress::openTCP failed to open TCP address %s error %s\n", getString().c_str(), SDLNet_GetError());
+        fprintf(stderr, "NetAddress::connectTCP failed to open TCP address %s error %s\n", getString().c_str(), SDLNet_GetError());
     }
-    return tcp_socket;
-}
 #endif
 
-NetAddress::~NetAddress() = default;
+    return tcp_socket;
+}
+#endif //EMSCRIPTEM
+
+NetAddress::~NetAddress() {
+#ifdef PERIMETER_SDL3
+    if (net_addr) {
+        NET_UnrefAddress(net_addr);
+    }
+#endif
+}
 
 bool NetAddress::resolve(NetAddress& address, const std::string& host, uint16_t default_port) {
     std::string host_tmp;
@@ -119,7 +216,23 @@ bool NetAddress::resolve(NetAddress& address, const std::string& host, uint16_t 
 #ifdef EMSCRIPTEN
     address.host = host_tmp;
     address.port = port;
-#else
+#else //EMSCRIPTEN
+#ifdef PERIMETER_SDL3
+    NET_Address* addr = NET_ResolveHostname(host.c_str());
+    if (addr) {
+        fprintf(stderr, "Error preparing to resolve host %s: %s\n", host.c_str(), SDL_GetError());
+        return false;
+    }
+    int timeout = 4;
+    NET_Status status = NET_WaitUntilResolved(addr, timeout);
+    if (status != NET_SUCCESS) {
+        fprintf(stderr, "Error resolving host %s: status %d error %s\n", host.c_str(), status, SDL_GetError());
+        return false;
+    }
+    address.host = host_tmp;
+    address.net_addr = addr;
+    address.port = port;
+#else //PERIMETER_SDL3
     IPaddress ipaddr;
     int32_t ret = SDLNet_ResolveHost(&ipaddr, host_tmp.c_str(), port) == 0;
     if (ret < 0 || ipaddr.host == INADDR_NONE) {
@@ -129,7 +242,8 @@ bool NetAddress::resolve(NetAddress& address, const std::string& host, uint16_t 
     address.host = host_tmp;
     address.addr4 = ipaddr.host;
     address.port = SDLNet_Read16(&ipaddr.port);
-#endif
+#endif //PERIMETER_SDL3
+#endif //EMSCRIPTEN
     return true;
 }
 
@@ -141,7 +255,12 @@ NetAddress& NetAddress::operator=(const NetAddress& other) {
     this->host = other.host;
     this->port = other.port;
 #ifndef EMSCRIPTEN
+#ifdef PERIMETER_SDL3
+    NET_RefAddress(net_addr);
+    this->net_addr = other.net_addr;
+#else
     this->addr4 = other.addr4;
+#endif
 #endif
     return *this;
 }
@@ -155,7 +274,11 @@ void NetAddress::reset() {
     host = "";
     port = 0;
 #ifndef EMSCRIPTEN
+#ifdef PERIMETER_SDL3
+    net_addr = nullptr;
+#else
     addr4 = INADDR_NONE;
+#endif
 #endif
 }
 
@@ -180,6 +303,17 @@ std::string NetAddress::getString() const {
 
 #ifndef EMSCRIPTEN
     if (!address.empty()) {
+#ifdef PERIMETER_SDL3
+        const char* addrstr = nullptr;
+        if (net_addr) {
+            addrstr = NET_GetAddressString(net_addr);
+        }
+        if (addrstr) {
+            address += " (";
+            address += addrstr;
+            address += ")";
+        }
+#else
         if (addr4 != INADDR_NONE) {
             address += " (";
             for (size_t i = 0; i < 4; ++i) {
@@ -189,6 +323,7 @@ std::string NetAddress::getString() const {
             }
             address += ")";
         }
+#endif
     }
 #endif
 
@@ -196,7 +331,24 @@ std::string NetAddress::getString() const {
 }
 
 ///////// NetTransport //////////////
-NetTransport* NetTransport::create(const NetAddress& address, int32_t timeout) {
+
+NetTransport* NetTransport::listen(const NetAddress& address) {
+#ifdef PERIMETER_SDL3
+    NET_Server* socket = address.listenTCP();
+
+    if (!socket) {
+        return nullptr;
+    }
+
+    return new NetTransportTCP(socket);
+#else
+    //In SDL2 the pathway is the same
+    return new NetTransport::connect(address, 0);
+#endif
+}
+
+
+NetTransport* NetTransport::connect(const NetAddress& address, int32_t timeout) {
 #ifdef EMSCRIPTEN
     int32_t handle = EM_ASM_INT((
         return Module.transportCreate($0);
@@ -207,8 +359,12 @@ NetTransport* NetTransport::create(const NetAddress& address, int32_t timeout) {
     }
 
     return new NetTransportWS(handle);
+#else // EMSCRIPTEN
+#ifdef PERIMETER_SDL3
+    NET_StreamSocket* socket = address.connectTCP(timeout);
 #else
-    TCPsocket socket = address.openTCP(timeout);
+    TCPsocket socket = address.connectTCP(timeout);
+#endif
 
     if (!socket) {
         return nullptr;
@@ -293,13 +449,33 @@ int32_t NetTransport::receive(void* buffer, uint32_t minlen, uint32_t maxlen, in
 
 ///////// NetTransportTCP //////////////
 
+#ifdef PERIMETER_SDL3
+NetTransportTCP::NetTransportTCP(NET_Server* server_) {
+    server = server_;
+}
+
+NetTransportTCP::NetTransportTCP(NET_StreamSocket* socket_) {
+    socket = socket_;
+}
+#else
 NetTransportTCP::NetTransportTCP(TCPsocket socket_) {
     socket = socket_;
     socket_set = SDLNet_AllocSocketSet(1);
     SDLNet_TCP_AddSocket(socket_set, socket);
 }
+#endif
 
 void NetTransportTCP::close() {
+#ifdef PERIMETER_SDL3
+    if (server) {
+        NET_DestroyServer(server);
+        server = nullptr;
+    }
+    if (socket) {
+        NET_DestroyStreamSocket(socket);
+        socket = nullptr;
+    }
+#else
     if (socket_set) {
         if (socket) {
             SDLNet_TCP_DelSocket(socket_set, socket);
@@ -311,21 +487,51 @@ void NetTransportTCP::close() {
         SDLNet_TCP_Close(socket);
         socket = nullptr;
     }
+#endif
 }
 
-int32_t NetTransportTCP::send_raw(const uint8_t* buffer, uint32_t len, int32_t _timeout) {
+int32_t NetTransportTCP::send_raw(const uint8_t* buffer, uint32_t len, int32_t timeout) {
+    if (socket == nullptr) {
+        return NT_STATUS_CLOSED;
+    }
+#ifdef PERIMETER_SDL3
+    if (!NET_WriteToStreamSocket(socket, buffer, static_cast<int32_t>(len))) {
+        fprintf(stderr, "NetTransportTCP::send data failed len %" PRIu32 " %s\n", len, SDL_GetError());
+        return NT_STATUS_ERROR;
+    }
+    //Should return pending = 0 unless timeout occurs, but the caller will handle incomplete transfers/timeout anyway
+    int pending = NET_WaitUntilStreamSocketDrained(socket, timeout);
+    if (pending < 0) {
+        fprintf(stderr, "NetTransportTCP::send got pending %d len %" PRIu32 "error %s\n", pending, len, SDL_GetError());
+        return NT_STATUS_ERROR;
+    }
+    int32_t amount = static_cast<int>(len) - pending;
+#else //PERIMETER_SDL3
     //May return 0 if closed
     int32_t amount = SDLNet_TCP_Send(socket, buffer, static_cast<int32_t>(len));
     if (amount == 0) {
         return NT_STATUS_CLOSED;
     } else if (amount <= 0) {
         fprintf(stderr, "NetTransportTCP::send data failed result %" PRIi32 " len %" PRIu32 " %s\n", amount, len, SDLNet_GetError());
-        return NT_STATUS_ERROR;
+        return NT_STATUS_ERROR;:
     }
+#endif
     return amount;
 }
 
 int32_t NetTransportTCP::receive_raw(uint8_t* buffer, uint32_t len, int32_t _timeout) {
+    if (socket == nullptr) {
+        return NT_STATUS_CLOSED;
+    }
+#ifdef PERIMETER_SDL3
+    int32_t amount = NET_ReadFromStreamSocket(socket, buffer, static_cast<int32_t>(len));
+    if (amount < 0) {
+        fprintf(stderr, "NetTransportTCP::receive failed amount %" PRIi32 " len %" PRIu32 " %s\n", amount, len, SDL_GetError());
+        return NT_STATUS_ERROR;
+    } else if (amount == 0) {
+        return NT_STATUS_NO_DATA;
+    }
+#else // PERIMETER_SDL3
 #ifdef GPX
     if (len == 8 && _timeout == 0) {
 #endif
@@ -357,47 +563,70 @@ int32_t NetTransportTCP::receive_raw(uint8_t* buffer, uint32_t len, int32_t _tim
         fprintf(stderr, "NetTransportTCP::receive failed amount %" PRIi32 " len %" PRIu32 " %s\n", amount, len, SDLNet_GetError());
         return NT_STATUS_ERROR;
     }
+#endif // PERIMETER_SDL3
     return amount;
 }
 
-TCPsocket NetTransportTCP::getSocket() {
-    return socket;
+#ifdef PERIMETER_SDL3
+bool NetTransportTCP::acceptIncoming(NetTransport** transport) {
+    NET_StreamSocket* incoming_socket = nullptr;
+    if (!NET_AcceptClient(server, &incoming_socket)) {
+        fprintf(stderr, "NetTransportTCP::acceptIncoming accept client error %s\n", SDL_GetError());
+        return false;
+    }
+    if (incoming_socket) {
+        *transport = new NetTransportTCP(incoming_socket);
+    }
+    return true;
 }
+#else //PERIMETER_SDL3
+bool NetTransportTCP::acceptIncoming(NetTransport** transport) {
+    if (!socket) {
+        return false;
+    }
+    TCPsocket incoming_socket = SDLNet_TCP_Accept(socket);
+    if (!incoming_socket) {
+        SDLNet_SetError(nullptr);
+    }
+    *transport = new NetTransportTCP(incoming_socket);
+    return true;
+}
+#endif //PERIMETER_SDL3
 
+#ifdef EMSCRIPTEN
 ///////// NetTransportWS //////////////
 
 NetTransportWS::NetTransportWS(int32_t handle): handle(handle) {}
 
 int32_t NetTransportWS::send_raw(const uint8_t* buffer, uint32_t len, int32_t timeout) {
-#ifdef EMSCRIPTEN
     return EM_ASM_INT((
         return Module.transportSend($0, $1, $2, $3);
     ), handle, buffer, len, timeout);
-#endif
-    return -1;
 }
 
 int32_t NetTransportWS::receive_raw(uint8_t* buffer, uint32_t len, int32_t timeout) {
-#ifdef EMSCRIPTEN
     return EM_ASM_INT((
         return Module.transportReceive($0, $1, $2, $3);
     ), handle, buffer, len, timeout);
-#endif
-    return -1;
 }
 
 void NetTransportWS::close() {
-#ifdef EMSCRIPTEN
     EM_ASM((
         Module.transportClose($0);
     ), handle);
     handle = -1;
-#endif
 }
 
 bool NetTransportWS::is_closed() const {
     return handle == -1;
 }
+
+bool NetTransportWS::acceptIncoming(NetTransport** transport) {
+    //Emscripten has no means to listen ports, thus no incoming connections
+    return false;
+}
+
+#endif //EMSCRIPTEN
 
 ///////// NetConnection //////////////
 
@@ -515,8 +744,17 @@ int32_t NetConnection::send(const XBuffer* data, NETID source, NETID destination
 
 #ifdef PERIMETER_DEBUG
     if (xbuf.tell() != msg_size) {
-        fprintf(stderr, "NetConnection::send NETID 0x%" PRIX64 " written buffer mismatch buf %" PRIsize " msg %" PRIi32 " len %" PRIsize " %s\n",
-                netid, xbuf.tell(), msg_size, sending_buffer.tell(), SDLNet_GetError());
+        fprintf(
+            stderr,
+            "NetConnection::send NETID 0x%" PRIX64 " written buffer mismatch"
+            " buf %" PRIsize " msg %" PRIi32 " len %" PRIsize " %s\n",
+            netid, xbuf.tell(), msg_size, sending_buffer.tell(),
+#ifdef PERIMETER_SDL3
+            SDL_GetError()
+#else
+            SDLNet_GetError()
+#endif
+        );
         close_error();
         return -4;
     }
@@ -524,8 +762,17 @@ int32_t NetConnection::send(const XBuffer* data, NETID source, NETID destination
     int32_t sent = transport->send(xbuf.buf, xbuf.tell(), timeout);
 
     if (sent != msg_size) {
-        fprintf(stderr, "NetConnection::send NETID 0x%" PRIX64 " length mismatch sent %" PRIi32 " msg %" PRIi32 " len %" PRIsize " %s\n",
-                netid, sent, msg_size, sending_buffer.tell(), SDLNet_GetError());
+        fprintf(
+            stderr,
+            "NetConnection::send NETID 0x%" PRIX64 " length mismatch"
+            " sent %" PRIi32 " msg %" PRIi32 " len %" PRIsize " %s\n",
+            netid, sent, msg_size, sending_buffer.tell(),
+#ifdef PERIMETER_SDL3
+            SDL_GetError()
+#else
+            SDLNet_GetError()
+#endif
+        );
         close_error();
         return -4;
     }
@@ -549,7 +796,16 @@ int32_t NetConnection::receive(NetConnectionMessage** packet_ptr, int32_t timeou
         return amount;
     }
     if (amount != sizeof(header)) {
-        fprintf(stderr, "NetConnection::receive NETID 0x%" PRIX64 " header failed amount %d %s\n", netid, amount, SDLNet_GetError());
+        fprintf(
+            stderr, "NetConnection::receive NETID "
+            "0x%" PRIX64 " header failed amount %d %s\n",
+            netid, amount,
+#ifdef PERIMETER_SDL3
+            SDL_GetError()
+#else
+            SDLNet_GetError()
+#endif
+        );
         return -2;
     }
 #ifdef PERIMETER_SDL3
@@ -560,7 +816,16 @@ int32_t NetConnection::receive(NetConnectionMessage** packet_ptr, int32_t timeou
     
     //Check magic
     if ((header & NC_HEADER_MASK) != NC_HEADER_MAGIC) {
-        fprintf(stderr, "NetConnection::receive NETID 0x%" PRIX64 " header failed magic mismatch 0x%" PRIX64 " %s\n", netid, header, SDLNet_GetError());
+        fprintf(
+            stderr, "NetConnection::receive NETID "
+            "0x%" PRIX64 " header failed magic mismatch 0x%" PRIX64 " %s\n",
+            netid, header,
+#ifdef PERIMETER_SDL3
+            SDL_GetError()
+#else
+            SDLNet_GetError()
+#endif
+        );
         return -2;
     }
 
@@ -589,10 +854,26 @@ int32_t NetConnection::receive(NetConnectionMessage** packet_ptr, int32_t timeou
             std::max(timeout, 0) + RECV_DATA_AFTER_HEADER_TIMEOUT
     );
     if (received <= 0) {
-        fprintf(stderr, "NetConnection::receive NETID 0x%" PRIX64 " data chunk failed amount %d received %d %s\n", netid, amount, received, SDLNet_GetError());
+        fprintf(stderr, "NetConnection::receive NETID"
+                " 0x%" PRIX64 " data chunk failed amount %d received %d %s\n",
+                netid, amount, received,
+#ifdef PERIMETER_SDL3
+                SDL_GetError()
+#else
+                SDLNet_GetError()
+#endif
+        );
         amount = -5;
     } else if (amount != received) {
-        fprintf(stderr, "NetConnection::receive NETID 0x%" PRIX64 " data failed amount %d received %d %s\n", netid, amount, received, SDLNet_GetError());
+        fprintf(stderr, "NetConnection::receive NETID"
+                " 0x%" PRIX64 " data failed amount %d received %d %s\n",
+                netid, amount, received,
+#ifdef PERIMETER_SDL3
+                SDL_GetError()
+#else
+                SDLNet_GetError()
+#endif
+        );
         amount = -6;
     }
 
