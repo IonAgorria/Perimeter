@@ -95,12 +95,27 @@ int cInterfaceRenderDevice::Init(int xScr, int yScr, int mode, SDL_Window* wnd, 
 
     //Get the biggest resolution we might need
     MaxScreenSize.set(0, 0);
-    int displays = SDL_GetNumVideoDisplays();
-    if (displays < 0) {
+#ifdef PERIMETER_SDL3
+    int num_displays = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&num_displays);
+#else
+    int num_displays = SDL_GetNumVideoDisplays();
+#endif
+
+    if (num_displays < 0) {
         SDL_PRINT_ERROR("SDL_GetNumVideoDisplays");
     } else {
-        SDL_DisplayMode mode;
-        for (int i = 0; i < displays; ++i) {
+        for (int i = 0; i < num_displays; ++i) {
+#ifdef PERIMETER_SDL3
+            const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(displays[i]);
+            if (!mode) {
+                SDL_PRINT_ERROR("SDL_GetDesktopDisplayMode");
+            } else {
+                MaxScreenSize.x = max(MaxScreenSize.x, mode->w);
+                MaxScreenSize.y = max(MaxScreenSize.y, mode->h);
+            }
+#else
+            SDL_DisplayMode mode;
             mode.w = 0;
             mode.h = 0;
             if (SDL_GetDesktopDisplayMode(i, &mode) != 0) {
@@ -109,6 +124,7 @@ int cInterfaceRenderDevice::Init(int xScr, int yScr, int mode, SDL_Window* wnd, 
                 MaxScreenSize.x = max(MaxScreenSize.x, mode.w);
                 MaxScreenSize.y = max(MaxScreenSize.y, mode.h);
             }
+#endif
         }
     }
     
