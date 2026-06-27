@@ -55,9 +55,6 @@
 #include <commdlg.h>
 #endif
 
-//#define WINDOW_FULLSCREEN_FLAG SDL_WINDOW_FULLSCREEN
-#define WINDOW_FULLSCREEN_FLAG SDL_WINDOW_FULLSCREEN_DESKTOP
-
 #include "../HT/mt_config.h"
 #include "../HT/ht.h"
 #include "GraphicsOptions.h"
@@ -478,18 +475,16 @@ void HTManager::GraphQuant()
 //--------------------------------
 void ErrorInitialize3D();
 
-///Returns true if its true fullscreen (no borderless window)
-bool isTrueFullscreen() {
-    return terFullScreen && WINDOW_FULLSCREEN_FLAG == SDL_WINDOW_FULLSCREEN;
-}
-
 void PerimeterSetupDisplayMode() {
 #if PERIMETER_DEBUG
     printf("PerimeterSetupDisplayMode\n");
 #endif
     SystemSetWindowGrab(sdlWindow, false);
-    bool windowFullscreen = SDL_GetWindowFlags(sdlWindow)&WINDOW_FULLSCREEN_FLAG;
-    
+    bool windowFullscreen = SDL_GetWindowFlags(sdlWindow)&SDL_WINDOW_FULLSCREEN_DESKTOP;
+
+#ifdef PERIMETER_SDL3
+    const SDL_DisplayMode* mode = nullptr;
+#else
     //Create display mode with current settings
     SDL_DisplayMode mode;
     mode.w = terScreenSizeX;
@@ -497,10 +492,20 @@ void PerimeterSetupDisplayMode() {
     mode.format = 0;
     mode.refresh_rate = terScreenRefresh;
     mode.driverdata = nullptr;
+#endif
 
     //Get display mode if no display was set previously
 #ifdef PERIMETER_SDL3
-    int windowScreenIndex = SDL_GetDisplayForWindow(sdlWindow);
+    SDL_DisplayID windowDisplayID = SDL_GetDisplayForWindow(sdlWindow);
+    int num_displays = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&num_displays);
+    int windowScreenIndex = -1;
+    for (int i = 0; i < num_displays; ++i) {
+        if (windowDisplayID == displays[i]) {
+            windowScreenIndex = i;
+            break;
+        }
+    }
 #else
     int windowScreenIndex = SDL_GetWindowDisplayIndex(sdlWindow);
 #endif
@@ -509,6 +514,12 @@ void PerimeterSetupDisplayMode() {
     }
     if (terScreenIndex < 0) {
         terScreenIndex = windowScreenIndex;
+#ifdef PERIMETER_SDL3
+        mode = SDL_GetDesktopDisplayMode(displays[terScreenIndex]);
+        if (!mode) {
+            SDL_PRINT_ERROR("SDL_GetDesktopDisplayMode");
+        }
+#else
         if (SDL_GetDesktopDisplayMode(terScreenIndex, &mode) != 0) {
             SDL_PRINT_ERROR("SDL_GetDesktopDisplayMode");
             terScreenIndex = -1;
@@ -517,6 +528,7 @@ void PerimeterSetupDisplayMode() {
             mode.w = terScreenSizeX;
             mode.h = terScreenSizeY;
         }
+#endif
     }
 
     //Place window in selected display
@@ -533,7 +545,7 @@ void PerimeterSetupDisplayMode() {
 #if PERIMETER_DEBUG
         printf("SDL_SetWindowFullscreen %d\n", terFullScreen);
 #endif
-        SDL_SetWindowFullscreen(sdlWindow, terFullScreen ? WINDOW_FULLSCREEN_FLAG : 0);
+        SDL_SetWindowFullscreen(sdlWindow, terFullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
     }
     
     //Set the display mode only on true fullscreen
@@ -568,7 +580,6 @@ void PerimeterSetupDisplayMode() {
             }
         }
 
-        //bool trueFullScreen = WINDOW_FULLSCREEN_FLAG == SDL_WINDOW_FULLSCREEN;
         if (!terFullScreen) {
             terScreenRefresh = mode.refresh_rate;
             //Check if we need to restore before resizing, otherwise the set size does nothing
@@ -594,7 +605,7 @@ void PerimeterSetupDisplayMode() {
 void PerimeterCreateWindow(uint32_t window_flags) {
     window_flags |= SDL_WINDOW_HIDDEN;
     if (terFullScreen) {
-        window_flags |= WINDOW_FULLSCREEN_FLAG;
+        window_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
     if (terResizableWindow) {
         window_flags |= SDL_WINDOW_RESIZABLE;
@@ -725,9 +736,8 @@ cInterfaceRenderDevice* SetGraph()
     int ModeRender = RENDERDEVICE_MODE_RGB32 | RENDERDEVICE_MODE_WINDOW;
 #else
 	int ModeRender=0;
-	if (!isTrueFullscreen()) {
-        ModeRender |= RENDERDEVICE_MODE_WINDOW;
-    }
+    //Borderless window
+    ModeRender |= RENDERDEVICE_MODE_WINDOW;
 	if (terBitPerPixel==32) {
         ModeRender |= RENDERDEVICE_MODE_RGB32;
     } else {

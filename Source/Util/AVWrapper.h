@@ -194,11 +194,8 @@ public:
     ///Get the duration of file in seconds
     double getDuration() const;
 
-    ///Provides approximate audio format from LIBAV to SDL
-    static SDL_AudioFormat toSDLAudioFormat(AVSampleFormat fmt);
-    
     ///Provides approximate audio format from SDL to LIBAV
-    static AVSampleFormat fromSDLAudioFormat(SDL_AudioFormat fmt, bool planar);
+    static AVSampleFormat fromSDLAudioFormat(SDL_AudioFormat fmt);
 };
 
 static bool AVWrapperFrame_compare(const AVWrapperFrame* first, const AVWrapperFrame* second) {

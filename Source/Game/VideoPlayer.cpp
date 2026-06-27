@@ -225,8 +225,13 @@ bool VideoPlayer::Init(const char* path) {
 
     //Only if there is audio output
     if (sample) {
+#ifdef PERIMETER_SDL3
+        //Tell wrapper to output f32 audio as the mixer internally uses it for callbacks
+        AVSampleFormat format = AVWrapper::fromSDLAudioFormat(SDL_AUDIO_F32LE);
+#else
         //Tell wrapper to output audio in device format
-        AVSampleFormat format = AVWrapper::fromSDLAudioFormat(SNDDeviceFormat(), false);
+        AVSampleFormat format = AVWrapper::fromSDLAudioFormat(SNDDeviceFormat());
+#endif
         wrapper->setupAudioConverter(format, SNDDeviceChannels(), SNDDeviceFrequency());
     
         //Load a silent sound buffer, so we can get a looping sample that will poll our buffer
@@ -548,8 +553,7 @@ void VideoPlayer::decodeFrames() {
 
 #ifdef PERIMETER_SDL3
 void VideoPlayer::trackBufferEffect(void *udata, MIX_Track *track, const SDL_AudioSpec *spec, float *stream, int samples) {
-    TODO handle this, how should length be calculated? should AudioBuffer fed with float on ffmpeg side?
-    size_t need = static_cast<size_t>(samples);
+    size_t need = static_cast<size_t>(samples) * sizeof(float);
 #else // PERIMETER_SDL3
 void VideoPlayer::channelBufferEffect(int _channel, void *stream, int len, void *udata) {
     size_t need = static_cast<size_t>(len);

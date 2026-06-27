@@ -2784,7 +2784,6 @@ void GameShell::updateMap() {
 	}
 }
 
-extern bool isTrueFullscreen();
 extern void PerimeterSetupDisplayMode();
 
 void GameShell::updateResolution(bool change_depth, bool change_size, bool change_display_mode) {
@@ -2793,9 +2792,8 @@ void GameShell::updateResolution(bool change_depth, bool change_size, bool chang
     }
     
 	int mode = RENDERDEVICE_MODE_RETURNERROR;
-	if (!isTrueFullscreen()) {
-        mode |= RENDERDEVICE_MODE_WINDOW;
-    }
+    //Borderless window
+    mode |= RENDERDEVICE_MODE_WINDOW;
 	if (terBitPerPixel==16) {
         mode |= RENDERDEVICE_MODE_RGB16;
     } else {
