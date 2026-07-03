@@ -546,17 +546,22 @@ bool create_directories(const std::string& path, std::error_code* error) {
         
         //Create dir since doesn't exist
         std::filesystem::path current_fs = std::filesystem::u8path(current);
-        bool result;
+        bool created;
         if (error) {
-            result = std::filesystem::create_directory(current_fs, *error);
+            created = std::filesystem::create_directory(current_fs, *error);
+            if (*error) {
+                fprintf(stderr, "create_directories: Error creating path '%s' - %d - %d - %s", current.c_str(), created, error->value(), error->message().c_str());
+            }
         } else {
-            result = std::filesystem::create_directory(current_fs);
+            created = std::filesystem::create_directory(current_fs);
         }
         
         //Add this new dir to paths
-        xassert(result);
-        if (result) {
-            scan_resource_paths(current);
+        xassert(created);
+        if (created) {
+            scan_resource_paths(current);            
+        } else {
+            fprintf(stderr, "create_directories: Path was not created '%s'", current.c_str());
         }
     }
     xassert(part.empty());
@@ -564,6 +569,12 @@ bool create_directories(const std::string& path, std::error_code* error) {
     bool result = std::filesystem::is_directory(current_fs);
     if (result) {
         scan_resource_paths(current);
+        if (error && *error) {
+            fprintf(stderr, "create_directories: Got error but path seems fine '%s' - %d - %s", current.c_str(), error->value(), error->message().c_str());
+            error->clear();
+        }
+    } else {
+        fprintf(stderr, "create_directories: Path is not dir '%s'", current.c_str());
     }
     return result;
 }
