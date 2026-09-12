@@ -13,7 +13,7 @@
 #include "GameContent.h"
 #include "MultiplayerCommon.h"
 
-extern BGScene bgScene;
+extern BGScene* bgScene;
 
 //We can only show 4 simultaneous player in UI, so we use paging to allow seeing more
 int lobbyPlayersPage = -1;

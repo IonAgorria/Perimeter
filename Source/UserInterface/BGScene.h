@@ -48,16 +48,16 @@ class BGScene {
 
 	protected:
 
-		cUnkLight* light;
-		cScene* scene;
-		cCamera* camera;
+		cUnkLight* light = nullptr;
+		cScene* scene = nullptr;
+		cCamera* camera = nullptr;
 
-		cObjectNodeRoot	*bgObj;
+		cObjectNodeRoot	*bgObj = nullptr;
 
-		float timer;
-		float liveTimer;
+		float timer = 0.0f;
+		float liveTimer = 0.0f;
 
-		bool enabled;
+		bool enabled = false;
 
 		struct SubObject {
 			cObjectNode* node;
@@ -67,9 +67,9 @@ class BGScene {
 			std::string chainName;
 		};
 
-		std::vector<SubObject> subObjects;
+		std::vector<SubObject> subObjects = {};
 
-		sColor4f skinColor;
+		sColor4f skinColor = {};
 };
 
 #endif //_BGSCENE_H

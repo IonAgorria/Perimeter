@@ -6579,9 +6579,9 @@ static float nLoadProgress = 0;
 static float nLoadProgressBlock = 0;
 static float nLoadProgressBlockSize = 1;
 
-extern HistoryScene historyScene;
-extern HistoryScene bwScene;
-extern BGScene bgScene;
+extern HistoryScene* historyScene;
+extern HistoryScene* bwScene;
+extern BGScene* bgScene;
 
 void LoadProgressStart()
 {
@@ -6598,16 +6598,16 @@ void LoadProgressBlock(float val)
 void LoadProgressUpdateScene(float val, HistoryScene* scene) {
 	nLoadProgressBlock = val;
 	scene->preDraw();
-	bgScene.preDraw();
+	bgScene->preDraw();
 
 	terRenderDevice->Fill(0,0,0);
 	terRenderDevice->BeginScene();
 
 	scene->draw();
 
-	bgScene.setProgress((nLoadProgress - nLoadProgressBlockSize * (1 - nLoadProgressBlock)));
+	bgScene->setProgress((nLoadProgress - nLoadProgressBlockSize * (1 - nLoadProgressBlock)));
 
-	bgScene.draw();
+	bgScene->draw();
 
 	_shellIconManager.draw();
 
@@ -6620,9 +6620,9 @@ void LoadProgressUpdateScene(float val, HistoryScene* scene) {
 }
 void LoadProgressUpdate(float val)
 {
-	if(historyScene.ready()) {
-		LoadProgressUpdateScene(val, &historyScene);
-	} else if (bwScene.ready()) {
-		LoadProgressUpdateScene(val, &bwScene);
+	if(historyScene->ready()) {
+		LoadProgressUpdateScene(val, historyScene);
+	} else if (bwScene->ready()) {
+		LoadProgressUpdateScene(val, bwScene);
 	}
 }

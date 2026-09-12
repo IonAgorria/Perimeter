@@ -67,9 +67,9 @@ void ToolzerSizeChangeQuant();
 void EnterInMissionMenu();
 void CancelEditWorkarea();
 
-extern HistoryScene historyScene;
-extern HistoryScene bwScene;
-extern BGScene bgScene;
+extern HistoryScene* historyScene;
+extern HistoryScene* bwScene;
+extern BGScene* bgScene;
 extern void PlayMusic(const char *str = 0);
 
 bool terEnableGDIPixel=false;
@@ -411,9 +411,9 @@ GameShell::~GameShell()
 }
 
 void GameShell::done() {
-	historyScene.done();
-	bwScene.done();
-	bgScene.done();
+   	historyScene->done();
+   	bwScene->done();
+   	bgScene->done();
 	_shellIconManager.Done();
 	_shellCursorManager.Done();
     if (mapMoveStartCamera_) {
@@ -925,11 +925,11 @@ void GameShell::Show()
 		terRenderDevice->FlushPrimitive3D();
 		terRenderDevice->SetClipRect(0,0,terRenderDevice->GetSizeX(),terRenderDevice->GetSizeY());
 
-		if (bgScene.ready()) {
-			bgScene.quant(frame_time.delta());
-			bgScene.preDraw();
-			bgScene.draw();
-			bgScene.postDraw();
+		if (bgScene->ready()) {
+			bgScene->quant(frame_time.delta());
+			bgScene->preDraw();
+			bgScene->draw();
+			bgScene->postDraw();
 		}
 
 		_shellIconManager.draw();
@@ -962,46 +962,46 @@ void GameShell::Show()
 	}
 	else{
 		//quant
-		if(bwScene.ready()){
-			bwScene.quant(mousePosition(), frame_time.delta());
-		} else if (!historyScene.ready()) {
+		if(bwScene->ready()){
+			bwScene->quant(mousePosition(), frame_time.delta());
+		} else if (!historyScene->ready()) {
 		} else {
-			historyScene.quant(mousePosition(), frame_time.delta());
+			historyScene->quant(mousePosition(), frame_time.delta());
 		}
 
-		if (bgScene.ready()) {
-			bgScene.quant(frame_time.delta());
+		if (bgScene->ready()) {
+			bgScene->quant(frame_time.delta());
 		}
 		
 		//draw
 		terRenderDevice->Fill(0,0,0);
 		terRenderDevice->BeginScene();
 
-		if (bwScene.ready()) {
-//			bwScene.quant(mousePosition(), frame_time.delta());
-			if (bwScene.ready()) {
-				bwScene.preDraw();
-				bwScene.draw();
-				bwScene.postDraw();
+		if (bwScene->ready()) {
+//			bwScene->quant(mousePosition(), frame_time.delta());
+			if (bwScene->ready()) {
+				bwScene->preDraw();
+				bwScene->draw();
+				bwScene->postDraw();
 			}
-		} else if (!historyScene.ready()) {
+		} else if (!historyScene->ready()) {
 			terScene->dSetTime(frame_time.delta());
 			terScene->PreDraw(terCamera->GetCamera());
 			terScene->Draw(terCamera->GetCamera());
 		} else {
-//			historyScene.quant(mousePosition(), frame_time.delta());
-			if (historyScene.ready()) {
-				historyScene.preDraw();
-				historyScene.draw();
-				historyScene.postDraw();
+//			historyScene->quant(mousePosition(), frame_time.delta());
+			if (historyScene->ready()) {
+				historyScene->preDraw();
+				historyScene->draw();
+				historyScene->postDraw();
 			}
 		}
 
-		if (bgScene.ready()) {
-//			bgScene.quant(frame_time.delta());
-			bgScene.preDraw();
-			bgScene.draw();
-			bgScene.postDraw();
+		if (bgScene->ready()) {
+//			bgScene->quant(frame_time.delta());
+			bgScene->preDraw();
+			bgScene->draw();
+			bgScene->postDraw();
 		}
 		_shellIconManager.draw();
 
@@ -2167,8 +2167,8 @@ void GameShell::MouseWheel(int delta)
             terCamera->mouseWheel(delta);
         }
     }
-	if (historyScene.ready()) {
-		historyScene.getCamera()->mouseWheel(delta);
+	if (historyScene->ready()) {
+		historyScene->getCamera()->mouseWheel(delta);
 	}
 
 	_shellIconManager.OnMouseWheel( delta );
@@ -2749,9 +2749,9 @@ void GameShell::updateResolution(bool change_depth, bool change_size, bool chang
 
     if(change_size) {
         setSourceUIResolution(Vect2i(terScreenSizeX, terScreenSizeY));
-		historyScene.onResolutionChanged();
-		bwScene.onResolutionChanged();
-		bgScene.onResolutionChanged();
+		historyScene->onResolutionChanged();
+		bwScene->onResolutionChanged();
+		bgScene->onResolutionChanged();
 		_shellIconManager.onSizeChanged();
 		terVisGeneric->ReloadAllFont();
 	}
@@ -2880,11 +2880,11 @@ void GameShell::preLoad() {
 
     const std::string& locale = getLocale();
     if (get_content_entry("RESOURCE/scenario_" + locale + ".hst")) {
-        historyScene.loadProgram("RESOURCE/scenario_" + locale + ".hst");
+        historyScene->loadProgram("RESOURCE/scenario_" + locale + ".hst");
     } else {
-        historyScene.loadProgram("RESOURCE/scenario.hst");
+        historyScene->loadProgram("RESOURCE/scenario.hst");
     }
-    bwScene.loadProgram("RESOURCE/menu.hst");
+    bwScene->loadProgram("RESOURCE/menu.hst");
 
     std::string path = getLocDataPath() + "Text";
     qdTextDB& texts = qdTextDB::instance();

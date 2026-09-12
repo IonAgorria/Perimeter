@@ -31,7 +31,7 @@ void onMMScenarioButton(CShellWindow* pWnd, InterfaceEventCode code, int param) 
     if( code == EVENT_UNPRESSED && intfCanHandleInput() ) {
         _shellIconManager.SwitchMenuScreens(pWnd->m_pParent->ID, SQSH_MM_SCENARIO_SCR);
 //		} else {
-//			historyScene.goToMission(-1);
+//			historyScene->goToMission(-1);
 //			_shellIconManager.SwitchMenuScreens(pWnd->m_pParent->ID, SQSH_MM_BRIEFING_SCR);
 //		}
     }
@@ -207,8 +207,8 @@ void onMMContentChooserSelectButton(CShellWindow* pWnd, InterfaceEventCode code,
 
 //briefing menu
 extern MissionDescription missionToExec;
-extern HistoryScene historyScene;
-extern BGScene bgScene;
+extern HistoryScene* historyScene;
+extern BGScene* bgScene;
 extern bool menuChangingDone;
 double lastClockSound = 0;
 int currYear = -1;
@@ -223,10 +223,10 @@ void onMMBriefingText(CShellWindow* pWnd, InterfaceEventCode code, int param) {
         }
         if (!txtWnd->m_bScroller) return;
         const float STEP = 0.25;
-        float pos = historyScene.getAudioPosition();
+        float pos = historyScene->getAudioPosition();
         float lines = txtWnd->textHeight / txtWnd->m_hFont->GetHeight();
         if (STEP <= pos) {
-            historyScene.resetAudioPosition();
+            historyScene->resetAudioPosition();
             int h = max(1, static_cast<int>(xm::floor(lines * STEP)));
             txtWnd->OnMouseWheel(h);
         }
@@ -237,9 +237,9 @@ void onMMYearBriefing(CShellWindow* pWnd, InterfaceEventCode code, int param) {
     if ( code == EVENT_DRAWWND ) {
         CTextWindow* txtWnd = (CTextWindow*) pWnd;
         char buffer[30 + 1];
-        int year = historyScene.getController()->getCurrentYear();
+        int year = historyScene->getController()->getCurrentYear();
         if (currYear == -1 || currYear != year) {
-            currYear = historyScene.getController()->getCurrentYear();
+            currYear = historyScene->getController()->getCurrentYear();
             //Avoid too much clock noises at once
             //We try to emulate the same random effect that DirectSound API gave in this situation
             if (clockf() > lastClockSound) {
@@ -257,7 +257,7 @@ void onMMYearBriefing(CShellWindow* pWnd, InterfaceEventCode code, int param) {
 void onMMNomadNameBriefing(CShellWindow* pWnd, InterfaceEventCode code, int param) {
     if ( code == EVENT_DRAWWND ) {
         CTextWindow* txtWnd = (CTextWindow*) pWnd;
-        Frame* frame = historyScene.getNomadFrame();
+        Frame* frame = historyScene->getNomadFrame();
         if (frame) {
             txtWnd->setText(HistoryScene::getFrameNameFromBase(frame->getName()));
             txtWnd->colorIndex = frame->getColorIndex();
@@ -265,12 +265,12 @@ void onMMNomadNameBriefing(CShellWindow* pWnd, InterfaceEventCode code, int para
             txtWnd->setText("");
         }
         int index = frame ? frame->getColorIndex() : DEFAULT_NOMAD_COLOR_INDEX;
-        bgScene.setSkinColor(sColor4f(playerColors[index].unitColor));
+        bgScene->setSkinColor(sColor4f(playerColors[index].unitColor));
     }
 }
 void onMMNomadIconBriefing(CShellWindow* pWnd, InterfaceEventCode code, int param) {
     if( code == EVENT_DRAWWND ) {
-        Frame* frame = historyScene.getNomadFrame();
+        Frame* frame = historyScene->getNomadFrame();
         if (frame) {
             ((CLogoWindow*)pWnd)->setRace(frame->getRace());
         } else {
@@ -281,7 +281,7 @@ void onMMNomadIconBriefing(CShellWindow* pWnd, InterfaceEventCode code, int para
 void onMMSkipBriefingButton(CShellWindow* pWnd, InterfaceEventCode code, int param) {
     if( code == EVENT_UNPRESSED && intfCanHandleInput() ) {
         if (!_shellIconManager.IsEffect()) {
-            historyScene.stop();
+            historyScene->stop();
             if (_shellIconManager.GetWnd(SQSH_MM_CONTINUE_BRIEFING_BTN)->isVisible()) {
                 _shellIconManager.SwitchMenuScreens( SKIP_BRIEFING_AFTER_PAUSE, SKIP_BRIEFING_AFTER_PAUSE );
             } else {
@@ -292,9 +292,9 @@ void onMMSkipBriefingButton(CShellWindow* pWnd, InterfaceEventCode code, int par
 }
 void onMMQuitFromBriefingButton(CShellWindow* pWnd, InterfaceEventCode code, int param) {
     if( code == EVENT_UNPRESSED && intfCanHandleInput() ) {
-        historyScene.stopAudio();
-        historyScene.stop();
-        historyScene.hideText();
+        historyScene->stopAudio();
+        historyScene->stop();
+        historyScene->hideText();
         _shellIconManager.SwitchMenuScreens(pWnd->m_pParent->ID, SQSH_MM_SCENARIO_SCR);
     }
 }
@@ -311,9 +311,9 @@ void HistoryScene::audioStopped() {
 }
 void onMMStartMissionButton(CShellWindow* pWnd, InterfaceEventCode code, int param) {
     if( code == EVENT_UNPRESSED && intfCanHandleInput() ) {
-        historyScene.stopAudio();
-        historyScene.stop();
-        missionToExec = MissionDescription( ("RESOURCE\\MISSIONS\\" + historyScene.getMissionToExecute().fileName).c_str() );
+        historyScene->stopAudio();
+        historyScene->stop();
+        missionToExec = MissionDescription( ("RESOURCE\\MISSIONS\\" + historyScene->getMissionToExecute().fileName).c_str() );
 
         //NOTE: should be removed when difficulty will be implemented for each separate player
         if (const Profile* profile = gameShell->currentSingleProfile.getCurrentProfile()) {
@@ -353,25 +353,25 @@ void onMMDifficultyCombo(CShellWindow* pWnd, InterfaceEventCode code, int param)
 void goToMissionWorkaround(int missionNumber) {
     //Weird workaround by trial and error for Perimeter (not ET) first mission but works for ET too
     //this basically jumpstarts the history to the first mission while showing the intro vid
-    historyScene.goToMission(0);
-    int year = historyScene.getController()->getMissionYear(missionNumber);
+    historyScene->goToMission(0);
+    int year = historyScene->getController()->getMissionYear(missionNumber);
     year = std::max(0, year-2);
-    historyScene.getController()->goToYear(year);
+    historyScene->getController()->goToYear(year);
 }
 
 void launchCurrentMission(CShellWindow* pWnd) {
     CListBoxWindow* list = (CListBoxWindow*) _shellIconManager.GetWnd(SQSH_MM_MISSION_LIST);
     int missionNumber = list->GetCurSel();
     if ( gameShell->briefingEnabled && missionNumber >= firstMissionNumber) {
-        historyScene.setMissionNumberToExecute(missionNumber);
+        historyScene->setMissionNumberToExecute(missionNumber);
         if (missionNumber == 0 || missionNumber == firstMissionNumber) {
             goToMissionWorkaround(missionNumber);
         } else {
             //Start after finishing the prev mission, so we can see all the plot and also not have screwed up
             //dialog or camera
-            historyScene.goToJustAfterMissionPosition(missionNumber - 1);
+            historyScene->goToJustAfterMissionPosition(missionNumber - 1);
         }
-        historyScene.hideText();
+        historyScene->hideText();
         _shellIconManager.SwitchMenuScreens(pWnd->m_pParent->ID, SQSH_MM_BRIEFING_SCR);
     } else {
         if (missionNumber < firstMissionNumber) {
@@ -380,7 +380,7 @@ void launchCurrentMission(CShellWindow* pWnd) {
         } else {
             goToMissionWorkaround(missionNumber);
         }
-        missionToExec = MissionDescription( ("RESOURCE\\MISSIONS\\" + historyScene.getMission(missionNumber).fileName).c_str() );
+        missionToExec = MissionDescription( ("RESOURCE\\MISSIONS\\" + historyScene->getMission(missionNumber).fileName).c_str() );
 
         //NOTE: should be removed when difficulty will be implemented for each separate player
         if (const Profile* profile = gameShell->currentSingleProfile.getCurrentProfile()) {

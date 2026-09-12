@@ -12,7 +12,7 @@
 class HistoryScene : public Commander {
 	public:
 		HistoryScene();
-		~HistoryScene();
+		virtual ~HistoryScene();
 
 		void init(cVisGeneric* visGeneric, bool bw, bool addBlendAlpha = true);
 		void done();
@@ -125,44 +125,44 @@ class HistoryScene : public Commander {
 		void setupWorld3D(WorldSphere* worldSphere);
 		void setupLink3D(LinkTubule* linkTubule);
 
-		Interpreter* interpreter;
-		cScene* scene;
-		HistorySceneCamera* historyCamera;
+		Interpreter* interpreter = nullptr;
+		cScene* scene = nullptr;
+		HistorySceneCamera* historyCamera = nullptr;
 
-		int missionNumberToExecute;
+		int missionNumberToExecute = 0;
 		
-		cObjectNodeRoot* skySphere;
-		cUnkLight* lightSky;
-		cScene* sceneSky;
-		cCamera* cameraSky;
+		cObjectNodeRoot* skySphere = nullptr;
+		cUnkLight* lightSky = nullptr;
+		cScene* sceneSky = nullptr;
+		cCamera* cameraSky = nullptr;
 
-		cTexture* worldTextures1[WorldSphere::MAX_TYPE];
-		cTexture* worldTextures2[WorldSphere::MAX_TYPE];
+		cTexture* worldTextures1[WorldSphere::MAX_TYPE] = {};
+		cTexture* worldTextures2[WorldSphere::MAX_TYPE] = {};
 
-		cTexture* linkSelected;
-		cTexture* linkNormal;
-		cTexture* electric;
+		cTexture* linkSelected = nullptr;
+		cTexture* linkNormal = nullptr;
+		cTexture* electric = nullptr;
 
 		Controller::WaitEventType lastEvent;
 
-		cFont* fnt;
-		cFont* logFnt;
-		cTexture* m_hPopupTexture;
+		cFont* fnt = nullptr;
+		cFont* logFnt = nullptr;
+		cTexture* m_hPopupTexture = nullptr;
 
-		bool addBlendAlpha;
+		bool addBlendAlpha = false;
 
-		MatXf initialMat;
+		MatXf initialMat = {};
 
-		cObjectNodeRoot* nomadMarker;
-		float timer;
+		cObjectNodeRoot* nomadMarker = nullptr;
+		float timer = 0.0f;
 
-		bool bwMode;
+		bool bwMode = false;
 
         uint64_t started_at = 0;
-		class SpeechPlayer* voice;
-		bool playingVoice;
+		class SpeechPlayer* voice = nullptr;
+		bool playingVoice = false;
 
-		std::string musicNamePath;
+		std::string musicNamePath = {};
 };
 
 #endif //_HISTORYSCENE_H

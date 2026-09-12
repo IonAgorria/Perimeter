@@ -1067,13 +1067,13 @@ void CShellIconManager::setTask(const char* id, ActionTask::Type actionType) {
 	fillTaskWnd();
 }
 
-extern HistoryScene historyScene;
+extern HistoryScene* historyScene;
 void CShellIconManager::fillTaskWnd() {
 	std::string taskTxt = gameShell->CurrentMission.missionDescription();
 
     if (gameShell->currentSingleProfile.getLastGameType() == UserSingleProfile::SCENARIO) {
         std::string name;
-        const char* name_str = qdTextDB::instance().getText(historyScene.getMissionToExecute().name.c_str());
+        const char* name_str = qdTextDB::instance().getText(historyScene->getMissionToExecute().name.c_str());
         if (name_str) name = name_str;
         if (!name.empty()) {
             if (taskTxt.empty()) {

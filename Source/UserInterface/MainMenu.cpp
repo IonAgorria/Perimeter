@@ -44,9 +44,9 @@ int _id_off;
 
 bool menuChangingDone;
 
-HistoryScene historyScene;
-HistoryScene bwScene;
-BGScene bgScene;
+extern HistoryScene* historyScene;
+extern HistoryScene* bwScene;
+extern BGScene* bgScene;
 
 std::vector<MissionDescription> savedGames;
 std::vector<MissionDescription> replays;
@@ -54,7 +54,7 @@ MissionDescription missionToExec;
 
 
 bool intfCanHandleInput() {
-	return !bgScene.isPlaying()
+	return !bgScene->isPlaying()
         && _shellIconManager.isDynQueueEmpty();
 }
 
@@ -125,7 +125,7 @@ void processInterfaceMessage(terUniverseInterfaceMessage id, int wndIDToHide = -
                 gameShell->cancelMouseLook();
             }
             if (gameShell->currentSingleProfile.getLastGameType() == UserSingleProfile::SCENARIO && (
-				gameShell->currentSingleProfile.getLastMissionNumber() == 0 || historyScene.getMissionNumberToExecute() == gameShell->currentSingleProfile.getLastMissionNumber()
+				gameShell->currentSingleProfile.getLastMissionNumber() == 0 || historyScene->getMissionNumberToExecute() == gameShell->currentSingleProfile.getLastMissionNumber()
 			)) {
                 gameShell->currentSingleProfile.setLastMissionNumber(gameShell->currentSingleProfile.getLastMissionNumber() + 1);
             }
@@ -170,7 +170,7 @@ void processInterfaceMessage(terUniverseInterfaceMessage id, int wndIDToHide = -
                 gameShell->cancelMouseLook();
             }
 			bool win = gameShell->currentSingleProfile.getLastGameType() == UserSingleProfile::SCENARIO
-					&& historyScene.getMissionNumberToExecute() < gameShell->currentSingleProfile.getLastMissionNumber();
+					&& historyScene->getMissionNumberToExecute() < gameShell->currentSingleProfile.getLastMissionNumber();
             gameShell->currentSingleProfile.setLastWin(win);
 
             if (multiPlayer) {
@@ -619,13 +619,13 @@ void fillStatsLists() {
 }
 
 void StartSpace() {
-	if (!bgScene.inited()) {
-		bgScene.init(terVisGeneric);
+	if (!bgScene->inited()) {
+		bgScene->init(terVisGeneric);
 	}
-	bgScene.setSkinColor();
-	if (!bwScene.ready()) {
-		bwScene.init(terVisGeneric, true, false);
-		bwScene.getController()->goToYear(300);
+	bgScene->setSkinColor();
+	if (!bwScene->ready()) {
+		bwScene->init(terVisGeneric, true, false);
+		bwScene->getController()->goToYear(300);
 	}
 }
 
@@ -643,7 +643,7 @@ void showStartMissionButton() {
 	CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_START_MISSION_BTN);
 	wnd->Show(1);
 	_shellIconManager.Effect(effectButtonsFadeIn, wnd); //запустить разлет
-//	bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
+//	bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
 
 	_shellIconManager.GetWnd(SQSH_MM_START_BRIEFING_BORDER)->Show(1);
 	_shellIconManager.Effect(effectButtonsFadeIn, _shellIconManager.GetWnd(SQSH_MM_START_BRIEFING_BORDER)); //запустить разлет
@@ -673,9 +673,9 @@ int SwitchMenuScreenQuant2( float, float ) {
 			switch (_id_on) {
 				case SQSH_MM_BRIEFING_SCR:
 					if (_id_off < 0) {
-						historyScene.getController()->eventOccured(Controller::MISSION_VICTORY_EVENT);
+						historyScene->getController()->eventOccured(Controller::MISSION_VICTORY_EVENT);
 					}
-					historyScene.start();
+					historyScene->start();
 					break;
 				case SQSH_MM_LOADING_MISSION_SCR:
 					{
@@ -685,7 +685,7 @@ int SwitchMenuScreenQuant2( float, float ) {
 	//						_shellIconManager.ClearQueue();
 							switch (gameShell->currentSingleProfile.getLastGameType()) {
 								case UserSingleProfile::SCENARIO:
-                                    missionToExec.missionNumber = historyScene.getMissionNumberToExecute();
+                                    missionToExec.missionNumber = historyScene->getMissionNumberToExecute();
 									break;
 								case UserSingleProfile::SURVIVAL:
 									missionToExec.missionNumber = -2;
@@ -702,11 +702,11 @@ int SwitchMenuScreenQuant2( float, float ) {
 							gameShell->currentSingleProfile.setGameResult(UNIVERSE_INTERFACE_MESSAGE_GAME_RESULT_UNDEFINED);
 	//					}
 						if (_id_off == SQSH_MM_BRIEFING_SCR) {
-							historyScene.done();
-							bgScene.done();
+							historyScene->done();
+							bgScene->done();
 						} else {
-							bwScene.done();
-							bgScene.done();
+							bwScene->done();
+							bgScene->done();
 						}
 					}
 					break;
@@ -714,7 +714,7 @@ int SwitchMenuScreenQuant2( float, float ) {
 		} else {
 			switch (_id_on) {
 				case SKIP_MISSION: {
-                    historyScene.getController()->eventOccured(Controller::MISSION_VICTORY_EVENT);
+                    historyScene->getController()->eventOccured(Controller::MISSION_VICTORY_EVENT);
                     break;
                 }
 			}
@@ -727,7 +727,7 @@ int SwitchMenuScreenQuant2( float, float ) {
 
 int SwitchMenuBGQuant2( float, float ) {
 	//!!!
-	if (!bgScene.isPlaying() && !_shellIconManager.IsEffect()) {
+	if (!bgScene->isPlaying() && !_shellIconManager.IsEffect()) {
 		if (_id_on >= 0) {
 			_shellIconManager.GetWnd(_id_on)->Show( 1 );
 			if (_id_on == SQSH_MM_SUBMIT_DIALOG_SCR) {
@@ -877,7 +877,7 @@ int SwitchMenuScreenQuant1( float, float ) {
 	static int bPlayFly=0;
 
 	//!!!
-	if (!bgScene.isPlaying() && !_shellIconManager.IsEffect()) {
+	if (!bgScene->isPlaying() && !_shellIconManager.IsEffect()) {
 		if (_id_off >= 0) {
 			_shellIconManager.GetWnd(_id_off)->Show( 0 );
 			if (_id_off == SQSH_MM_SUBMIT_DIALOG_SCR) {
@@ -924,15 +924,15 @@ int SwitchMenuScreenQuant1( float, float ) {
                     if (gameShell->currentSingleProfile.getLastGameType() == UserSingleProfile::MULTIPLAYER) {
                         gameShell->currentSingleProfile.setLastGameType(UserSingleProfile::UNDEFINED);
                     }
-                    historyScene.stop();
+                    historyScene->stop();
                     StartSpace();
-                    historyScene.done();
+                    historyScene->done();
 					break;
 				case SQSH_MM_SINGLE_SCR:
                     integrations::set_rich_presence(RichPresenceActivityMenu);
-                    historyScene.stop();
+                    historyScene->stop();
                     StartSpace();
-                    historyScene.done();
+                    historyScene->done();
 					break;
                 case SQSH_MM_CONTENT_CHOOSER_SCR:
                     fillContentChooserList();
@@ -958,9 +958,9 @@ int SwitchMenuScreenQuant1( float, float ) {
 							input->SetText(qdTextDB::instance().getText("Interface.Menu.EmptyName.NewPlayer"));
 						}
 
-						historyScene.stop();
+						historyScene->stop();
 						StartSpace();
-						historyScene.done();
+						historyScene->done();
 					}
 					break;
 				case SQSH_MM_BRIEFING_SCR:
@@ -968,14 +968,14 @@ int SwitchMenuScreenQuant1( float, float ) {
 //						PlayMusic( briefingMusic );
 						_shellCursorManager.m_bShowSideArrows = 1;
 
-						if (!bgScene.inited()) {
-							bgScene.init(terVisGeneric);
+						if (!bgScene->inited()) {
+							bgScene->init(terVisGeneric);
 						}
-						Frame* frame = historyScene.getNomadFrame();
-						bgScene.setSkinColor(frame ? sColor4f(playerColors[frame->getColorIndex()].unitColor) : sColor4f(1, 1, 1, 1));
-						historyScene.init(terVisGeneric, false, HISTORY_ADD_BLEND_ALPHA_MODE);
-						historyScene.playMusic();
-						bwScene.done();
+						Frame* frame = historyScene->getNomadFrame();
+						bgScene->setSkinColor(frame ? sColor4f(playerColors[frame->getColorIndex()].unitColor) : sColor4f(1, 1, 1, 1));
+						historyScene->init(terVisGeneric, false, HISTORY_ADD_BLEND_ALPHA_MODE);
+						historyScene->playMusic();
+						bwScene->done();
 						integrations::set_rich_presence(RichPresenceActivityCampaign);
 
 //						_shellCursorManager.SetActiveCursor(CShellCursorManager::arrow, 1);	
@@ -996,23 +996,23 @@ int SwitchMenuScreenQuant1( float, float ) {
 						list->NewItem(1);
 						list->Clear();
 
-                        if (lastWinnedMissionNumber >= historyScene.missionCount()) {
-                            lastWinnedMissionNumber = historyScene.missionCount() - 1;
+                        if (lastWinnedMissionNumber >= historyScene->missionCount()) {
+                            lastWinnedMissionNumber = historyScene->missionCount() - 1;
                         }
 
 						for (int i = 0; i <= lastWinnedMissionNumber; i++) {
-							const char* stringFromBase = qdTextDB::instance().getText(historyScene.getMission(i).name.c_str());
-							list->AddString( (*stringFromBase) ? stringFromBase : historyScene.getMission(i).name.c_str(), 0 );
+							const char* stringFromBase = qdTextDB::instance().getText(historyScene->getMission(i).name.c_str());
+							list->AddString( (*stringFromBase) ? stringFromBase : historyScene->getMission(i).name.c_str(), 0 );
 						}
 						if (list->GetItemCount() > 2) {
 							list->SetCurSel(list->GetItemCount() - 1);
 						} else {
 							list->SetCurSel(0);
 						}
-						historyScene.getController()->setNormalSpeedMode(true);
-						historyScene.stop();
+						historyScene->getController()->setNormalSpeedMode(true);
+						historyScene->stop();
 						StartSpace();
-						historyScene.done();
+						historyScene->done();
 						integrations::set_rich_presence(RichPresenceActivityCampaign);
 					}
 					break;
@@ -1073,8 +1073,8 @@ int SwitchMenuScreenQuant1( float, float ) {
 					break;
 				case SQSH_MM_LOADING_MISSION_SCR:
 					{
-                        if (!bgScene.inited()) {
-                            //bgScene.init(terVisGeneric);
+                        if (!bgScene->inited()) {
+                            //bgScene->init(terVisGeneric);
                             StartSpace();
                         }
 
@@ -1129,7 +1129,7 @@ int SwitchMenuScreenQuant1( float, float ) {
 						CLogoWindow* logoWnd = (CLogoWindow*)_shellIconManager.GetWnd(SQSH_MM_LOADING_NOMAD_ICON);
 						txtWnd = (CTextWindow*)_shellIconManager.GetWnd(SQSH_MM_LOADING_NOMAD_TXT);
 
-						Frame* frame = historyScene.getNomadFrame();
+						Frame* frame = historyScene->getNomadFrame();
                         auto player = missionToExec.getActivePlayerData();
 						if (frame && gameShell->currentSingleProfile.getLastGameType() == UserSingleProfile::SCENARIO) {
 							txtWnd->setText(HistoryScene::getFrameNameFromBase(frame->getName()));
@@ -1157,7 +1157,7 @@ int SwitchMenuScreenQuant1( float, float ) {
                             txtWnd->setText("???");
                             txtWnd->colorIndex = 0;
                         }
-                        bgScene.setSkinColor(sColor4f(playerColors[txtWnd->colorIndex].unitColor));
+                        bgScene->setSkinColor(sColor4f(playerColors[txtWnd->colorIndex].unitColor));
 					}
 					break;
                 case SQSH_MM_MULTIPLAYER_LIST_SCR:
@@ -1186,9 +1186,9 @@ int SwitchMenuScreenQuant1( float, float ) {
                         PNetCenter* pnc = gameShell->getNetClient();
                         if (pnc) pnc->updateIntegrationRichPresence();
                         
-                        historyScene.stop();
+                        historyScene->stop();
                         StartSpace();
-                        historyScene.done();
+                        historyScene->done();
                     }
                     break;
                 case SQSH_MM_MULTIPLAYER_LOBBY_SCR:
@@ -1255,7 +1255,7 @@ int SwitchMenuScreenQuant1( float, float ) {
 				CShellWindow* pWnd = _shellIconManager.GetWnd(_id_on);
 				if (pWnd && pWnd->m_attr_cont) {
 					for (int i = 0; i < pWnd->m_attr_cont->bgObjects.size(); i++) {
-						bgScene.markToPlay(pWnd->m_attr_cont->bgObjects[i].name, pWnd->m_attr_cont->bgObjects[i].chainName, true);
+						bgScene->markToPlay(pWnd->m_attr_cont->bgObjects[i].name, pWnd->m_attr_cont->bgObjects[i].chainName, true);
 					}
 				}
 			}
@@ -1266,9 +1266,9 @@ int SwitchMenuScreenQuant1( float, float ) {
 			switch (_id_on) {
 				case SHOW_LAST_SPLASH:
 					_shellCursorManager.HideCursor();
-					bgScene.done();
-					bwScene.done();
-					historyScene.done();
+					bgScene->done();
+					bwScene->done();
+					historyScene->done();
                     //show last splash
                     gameShell->reelAbortEnabled = lastReel.abortEnabled;
                     if (lastReel.video) {
@@ -1302,8 +1302,8 @@ int SwitchMenuScreenQuant1( float, float ) {
 					break;
 				case CONTINUE_BRIEFING:
 					//continue briefing after pause
-					historyScene.getController()->eventOccured(Controller::CONTROL_SUBMIT_EVENT);
-					historyScene.stopAudio();
+					historyScene->getController()->eventOccured(Controller::CONTROL_SUBMIT_EVENT);
+					historyScene->stopAudio();
 					break;
 				case READY:
 					gameShell->getNetClient()->StartLoadTheGame(true);
@@ -1312,23 +1312,23 @@ int SwitchMenuScreenQuant1( float, float ) {
 				case SKIP_MISSION:
 					{
 						//continue briefing after skip mission
-						historyScene.stopAudio();
+						historyScene->stopAudio();
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_SKIP_BRIEFING_BTN);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
 					}
 					break;
 				case SKIP_BRIEFING_AFTER_PAUSE:
 				case SKIP_BRIEFING:
-					historyScene.stopAudio();
+					historyScene->stopAudio();
 					//set fast speed
-					historyScene.start();
-					historyScene.setNormalSpeedMode(false);
-					historyScene.getController()->eventOccured(Controller::CONTROL_SUBMIT_EVENT);
+					historyScene->start();
+					historyScene->setNormalSpeedMode(false);
+					historyScene->getController()->eventOccured(Controller::CONTROL_SUBMIT_EVENT);
 					break;
 				case SHOW_START_SKIP_MISSION:
 					{
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_SKIP_MISSION_BTN);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
 					}
                     [[fallthrough]];
 				case SHOW_START_HIDE_SKIP_MISSION:
@@ -1336,21 +1336,21 @@ int SwitchMenuScreenQuant1( float, float ) {
 					{
 						//show start mission button
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_START_MISSION_BTN);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
-						historyScene.setNormalSpeedMode(true);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
+						historyScene->setNormalSpeedMode(true);
 					}
 					break;
 				case SHOW_SKIP_CONTINUE:
 					{
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_SKIP_BRIEFING_BTN);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
 					}
                     [[fallthrough]];
 				case SHOW_CONTINUE:
 					{
 						//show continue button
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_CONTINUE_BRIEFING_BTN);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, true);
 					}
 					break;
                 default:
@@ -1358,7 +1358,7 @@ int SwitchMenuScreenQuant1( float, float ) {
 			}
 		}
 		if (_id_on != SQSH_MM_SUBMIT_DIALOG_SCR) {
-			bgScene.play(); //запустить слет BG
+			bgScene->play(); //запустить слет BG
 		}
 		return 0;
 	}
@@ -1385,12 +1385,12 @@ int SwitchMenuBGQuant1( float, float ) {
 				_shellIconManager.AddDynamicHandler(SwitchMenuScreenQuant1, CBCODE_QUANT); //ждать пока не разлетится BG
 				return 0;
 			}
-			bgScene.markAllToPlay(false);
+			bgScene->markAllToPlay(false);
 			if (_id_on > 0 && _id_on != SQSH_MM_SUBMIT_DIALOG_SCR) {
 				CShellWindow* pWnd = _shellIconManager.GetWnd(_id_on);
 				if (pWnd && pWnd->m_attr_cont) {
 					for (int i = 0; i < pWnd->m_attr_cont->bgObjects.size(); i++) {
-						bgScene.unmarkToPlay(pWnd->m_attr_cont->bgObjects[i].name, pWnd->m_attr_cont->bgObjects[i].chainName, true);
+						bgScene->unmarkToPlay(pWnd->m_attr_cont->bgObjects[i].name, pWnd->m_attr_cont->bgObjects[i].chainName, true);
 					}
 				}
 			}
@@ -1406,7 +1406,7 @@ int SwitchMenuBGQuant1( float, float ) {
 						_shellIconManager.GetWnd(SQSH_MM_CONTINUE_BRIEFING_BORDER)->Show(0);
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_CONTINUE_BRIEFING_BTN);
 						wnd->Show(0);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
 					}
 					break;
 				case READY:
@@ -1414,7 +1414,7 @@ int SwitchMenuBGQuant1( float, float ) {
 						_shellIconManager.GetWnd(SQSH_MM_LOBBY_START_BORDER)->Show(0);
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_LOBBY_START_BTN);
 						wnd->Show(0);
-						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
+						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
 					}
 					break;
 				case SKIP_MISSION:
@@ -1424,10 +1424,10 @@ int SwitchMenuBGQuant1( float, float ) {
 
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_START_MISSION_BTN);
 						wnd->Show(0);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
 						wnd = _shellIconManager.GetWnd(SQSH_MM_SKIP_MISSION_BTN);
 						wnd->Show(0);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
 					}
 					break;
 				case SKIP_BRIEFING_AFTER_PAUSE:
@@ -1435,7 +1435,7 @@ int SwitchMenuBGQuant1( float, float ) {
 						_shellIconManager.GetWnd(SQSH_MM_CONTINUE_BRIEFING_BORDER)->Show(0);
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_CONTINUE_BRIEFING_BTN);
 						wnd->Show(0);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
 					}
                     [[fallthrough]];
 				case SKIP_BRIEFING:
@@ -1444,13 +1444,13 @@ int SwitchMenuBGQuant1( float, float ) {
 						_shellIconManager.GetWnd(SQSH_MM_SKIP_BRIEFING_BORDER)->Show(0);
 						CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_SKIP_BRIEFING_BTN);
 						wnd->Show(0);
-//						bgScene.markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
+//						bgScene->markToPlay(wnd->m_attr->bgObject.name, wnd->m_attr->bgObject.chainName, false);
 					}
 					break;
 			}
 		}
 		if (_id_on != SQSH_MM_SUBMIT_DIALOG_SCR) {
-			bgScene.play(); //запустить разлет BG
+			bgScene->play(); //запустить разлет BG
 		}
 		_shellIconManager.AddDynamicHandler(SwitchMenuScreenQuant1, CBCODE_QUANT); //ждать пока не разлетится BG
 		return 0;
@@ -1848,7 +1848,7 @@ void onMMQuitFromStatsButton(CShellWindow* pWnd, InterfaceEventCode code, int pa
 			return;
 		}
 		HTManager::instance()->GameClose();
-//		bgScene.setEnabled(true);
+//		bgScene->setEnabled(true);
 		_shellIconManager.LoadControlsGroup(SHELL_LOAD_GROUP_MENU);
         gb_Music.Stop();
 		switch(gameShell->currentSingleProfile.getLastGameType()) {
@@ -1874,7 +1874,7 @@ void onMMQuitFromStatsButton(CShellWindow* pWnd, InterfaceEventCode code, int pa
 void onMMContinueFromStatsButton(CShellWindow* pWnd, InterfaceEventCode code, int param) {
 	if( code == EVENT_UNPRESSED && intfCanHandleInput() ) {
 		HTManager::instance()->GameClose();
-//		bgScene.setEnabled(true);
+//		bgScene->setEnabled(true);
 		_shellIconManager.LoadControlsGroup(SHELL_LOAD_GROUP_MENU);
 		if (gameShell->briefingEnabled) {
 			hideAuxBriefingButtons();
@@ -2099,8 +2099,8 @@ bool setupMissionToExec(int pos) {
         gameShell->currentSingleProfile.setLastGameType(UserSingleProfile::SURVIVAL);
     } else {
         gameShell->currentSingleProfile.setLastGameType(UserSingleProfile::SCENARIO);
-        historyScene.goToJustAfterMissionPosition(missionToExec.missionNumber);
-        historyScene.setMissionNumberToExecute(missionToExec.missionNumber);
+        historyScene->goToJustAfterMissionPosition(missionToExec.missionNumber);
+        historyScene->setMissionNumberToExecute(missionToExec.missionNumber);
 //		strncpy(missionToExec.getActivePlayerData().Name, gameShell->currentSingleProfile.getCurrentProfile().name.c_str(), PERIMETER_CONTROL_NAME_SIZE);
     }
 
@@ -2567,13 +2567,13 @@ void HistoryScene::executeMission(const std::string& fileName) {
 	setMissionNumberToExecute(interpreter->findMission(fileName));
 	CShellWindow* wnd = _shellIconManager.GetWnd(SQSH_MM_SKIP_BRIEFING_BTN);
 	if (!wnd->isVisible()) {
-		if (historyScene.getMissionNumberToExecute() < gameShell->currentSingleProfile.getLastMissionNumber()) {
+		if (historyScene->getMissionNumberToExecute() < gameShell->currentSingleProfile.getLastMissionNumber()) {
 			_shellIconManager.SwitchMenuScreens( SHOW_START_SKIP_MISSION, SHOW_START_SKIP_MISSION );
 		} else {
 			_shellIconManager.SwitchMenuScreens( SHOW_START_MISSION, SHOW_START_MISSION );
 		}
 	} else {
-		if (historyScene.getMissionNumberToExecute() < gameShell->currentSingleProfile.getLastMissionNumber()) {
+		if (historyScene->getMissionNumberToExecute() < gameShell->currentSingleProfile.getLastMissionNumber()) {
 			wnd->Show(0);
 			_shellIconManager.GetWnd(SQSH_MM_SKIP_BRIEFING_BORDER)->Show(0);
 
@@ -2621,7 +2621,7 @@ void HistoryScene::hideText() {
 }
 
 void HistoryScene::finishHistory() {
-	historyScene.stop();
+	historyScene->stop();
 //	gb_Music.FadeVolume(_fEffectButtonTotalTime*0.001f);
 	_shellIconManager.SwitchMenuScreens(SQSH_MM_BRIEFING_SCR, SQSH_MM_CREDITS_SCR);
 }
@@ -2633,4 +2633,3 @@ void CShellLogicDispatcher::OnInterfaceMessage(int id, bool fromTrigger) {
 }
 
 //////////////////////
-

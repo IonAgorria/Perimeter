@@ -26,7 +26,7 @@
 
 extern MusicPlayer gb_Music;
 extern MissionDescription missionToExec;
-extern BGScene bgScene;
+extern BGScene* bgScene;
 
 std::vector<MissionDescription> battleMaps;
 MonoSelect battleColors;

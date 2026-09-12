@@ -22,9 +22,9 @@
 #include "MainMenu.h"
 #include "MessageBox.h"
 
-extern BGScene bgScene;
-extern HistoryScene historyScene;
-extern HistoryScene bwScene;
+extern BGScene* bgScene;
+extern HistoryScene* historyScene;
+extern HistoryScene* bwScene;
 extern int terShowTips;
 extern int applicationRunBackground;
 extern SHELL_ANCHOR shell_anchor;
